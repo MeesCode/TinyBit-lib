@@ -9,8 +9,106 @@
 #include "font.h"
 #include "input.h"
 #include "audio.h"
+#include "tinybit.h"
 
-void lua_setup_functions(lua_State* L) {
+void lua_setup(lua_State* L) {
+    
+    // load lua libraries
+    static const luaL_Reg loadedlibs[] = {
+        {LUA_GNAME, luaopen_base},
+        {LUA_COLIBNAME, luaopen_coroutine},
+        {LUA_TABLIBNAME, luaopen_table},
+        {LUA_STRLIBNAME, luaopen_string},
+        {LUA_MATHLIBNAME, luaopen_math},
+        {NULL, NULL}
+    };
+
+    const luaL_Reg* lib;
+    for (lib = loadedlibs; lib->func; lib++) {
+        luaL_requiref(L, lib->name, lib->func, 1);
+        lua_pop(L, 1);  /* remove lib */
+    }
+
+    // setup global variables
+    lua_pushinteger(L, TB_MEM_SIZE);
+    lua_setglobal(L, "MEM_SIZE");
+    lua_pushinteger(L, TB_MEM_SPRITESHEET_START);
+    lua_setglobal(L, "TB_MEM_SPRITESHEET_START");
+    lua_pushinteger(L, TB_MEM_SPRITESHEET_SIZE);
+    lua_setglobal(L, "TB_MEM_SPRITESHEET_SIZE");
+    lua_pushinteger(L, TB_MEM_DISPLAY_START);
+    lua_setglobal(L, "TB_MEM_DISPLAY_START");
+    lua_pushinteger(L, TB_MEM_DISPLAY_SIZE);
+    lua_setglobal(L, "TB_MEM_DISPLAY_SIZE");
+    lua_pushinteger(L, TB_MEM_USER_START);
+    lua_setglobal(L, "TB_MEM_USER_START");
+
+    // set lua tone variables
+    lua_pushinteger(L, Ab);
+    lua_setglobal(L, "Ab");
+    lua_pushinteger(L, A);
+    lua_setglobal(L, "A");
+    lua_pushinteger(L, As);
+    lua_setglobal(L, "As");
+    lua_pushinteger(L, Bb);
+    lua_setglobal(L, "Bb");
+    lua_pushinteger(L, B);
+    lua_setglobal(L, "B");
+    lua_pushinteger(L, C);
+    lua_setglobal(L, "C");
+    lua_pushinteger(L, Cs);
+    lua_setglobal(L, "Cs");
+    lua_pushinteger(L, Db);
+    lua_setglobal(L, "Db");
+    lua_pushinteger(L, D);
+    lua_setglobal(L, "D");
+    lua_pushinteger(L, Ds);
+    lua_setglobal(L, "Ds");
+    lua_pushinteger(L, Eb);
+    lua_setglobal(L, "Eb");
+    lua_pushinteger(L, E);
+    lua_setglobal(L, "E");
+    lua_pushinteger(L, F);
+    lua_setglobal(L, "F");
+    lua_pushinteger(L, Fs);
+    lua_setglobal(L, "Fs");
+    lua_pushinteger(L, Gb);
+    lua_setglobal(L, "Gb");
+    lua_pushinteger(L, G);
+    lua_setglobal(L, "G");
+    lua_pushinteger(L, Gs);
+    lua_setglobal(L, "Gs");
+
+    // set lua waveforms
+    lua_pushinteger(L, SINE);
+    lua_setglobal(L, "SINE");
+    lua_pushinteger(L, SAW);
+    lua_setglobal(L, "SAW");
+    lua_pushinteger(L, SQUARE);
+    lua_setglobal(L, "SQUARE");
+
+    lua_pushinteger(L, TB_SCREEN_WIDTH);
+    lua_setglobal(L, "TB_SCREEN_WIDTH");
+    lua_pushinteger(L, TB_SCREEN_HEIGHT);
+    lua_setglobal(L, "TB_SCREEN_HEIGHT");
+
+    lua_pushinteger(L, BUTTON_A);
+	lua_setglobal(L, "X");
+	lua_pushinteger(L, BUTTON_B);
+	lua_setglobal(L, "Z");
+	lua_pushinteger(L, BUTTON_UP);
+	lua_setglobal(L, "UP");
+	lua_pushinteger(L, BUTTON_DOWN);
+	lua_setglobal(L, "DOWN");
+	lua_pushinteger(L, BUTTON_LEFT);
+	lua_setglobal(L, "LEFT");
+	lua_pushinteger(L, BUTTON_RIGHT);
+	lua_setglobal(L, "RIGHT");
+	lua_pushinteger(L, BUTTON_START);
+	lua_setglobal(L, "START");
+    lua_pushinteger(L, BUTTON_SELECT);
+	lua_setglobal(L, "SELECT");
+
     lua_pushcfunction(L, lua_sprite);
     lua_setglobal(L, "sprite");
     lua_pushcfunction(L, lua_millis);

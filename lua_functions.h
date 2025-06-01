@@ -5,7 +5,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 
-void lua_setup_functions();
+void lua_setup();
 
 int lua_sprite(lua_State* L);
 int lua_millis(lua_State* L);
@@ -29,6 +29,5 @@ int lua_poke(lua_State* L);
 int lua_cursor(lua_State* L);
 int lua_prints(lua_State* L);
 int lua_text(lua_State* L);
-int lua_fillp(lua_State* L);
 
 #endif

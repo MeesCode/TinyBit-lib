@@ -33,7 +33,7 @@ struct __attribute__((packed)) TinyBitMemory {
 
 extern struct TinyBitMemory* tinybit_memory;
 
-bool tinybit_init(struct TinyBitMemory* memory, uint8_t* bs);
+void tinybit_init(struct TinyBitMemory* memory, uint8_t* bs);
 bool tinybit_feed_catridge(uint8_t* cartridge_buffer, size_t bytes);
 bool tinybit_frame();
 bool tinybit_start();
