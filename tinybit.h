@@ -31,7 +31,7 @@ struct TinyBitMemory {
     uint8_t user[TB_MEM_USER_SIZE];
 };
 
-typedef enum {
+enum TinyBitButton {
 	TB_BUTTON_A,
 	TB_BUTTON_B,
 	TB_BUTTON_UP,
@@ -40,8 +40,7 @@ typedef enum {
 	TB_BUTTON_RIGHT,
 	TB_BUTTON_START,
 	TB_BUTTON_SELECT
-} TinyBitButton;
-
+};
 
 extern struct TinyBitMemory* tinybit_memory;
 
