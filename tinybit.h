@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
+#include "lua/lua.h"
+#include "lua/lualib.h"
+#include "lua/lauxlib.h"
 
 // cartridge dimensions
 #define TB_CARTRIDGE_WIDTH 336
@@ -25,11 +25,23 @@
 #define TB_MEM_USER_START 0x20000
 #define TB_MEM_USER_SIZE 0x10000
 
-struct __attribute__((packed)) TinyBitMemory {
+struct TinyBitMemory {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
     uint8_t display[TB_MEM_DISPLAY_SIZE];
     uint8_t user[TB_MEM_USER_SIZE];
 };
+
+typedef enum {
+	TB_BUTTON_A,
+	TB_BUTTON_B,
+	TB_BUTTON_UP,
+	TB_BUTTON_DOWN,
+	TB_BUTTON_LEFT,
+	TB_BUTTON_RIGHT,
+	TB_BUTTON_START,
+	TB_BUTTON_SELECT
+} TinyBitButton;
+
 
 extern struct TinyBitMemory* tinybit_memory;
 

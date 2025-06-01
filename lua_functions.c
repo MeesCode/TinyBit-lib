@@ -1,7 +1,7 @@
 
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
+#include "lua/lua.h"
+#include "lua/lualib.h"
+#include "lua/lauxlib.h"
 
 #include "lua_functions.h"
 #include "graphics.h"
@@ -92,21 +92,21 @@ void lua_setup(lua_State* L) {
     lua_pushinteger(L, TB_SCREEN_HEIGHT);
     lua_setglobal(L, "TB_SCREEN_HEIGHT");
 
-    lua_pushinteger(L, BUTTON_A);
+    lua_pushinteger(L, TB_BUTTON_A);
 	lua_setglobal(L, "X");
-	lua_pushinteger(L, BUTTON_B);
+	lua_pushinteger(L, TB_BUTTON_B);
 	lua_setglobal(L, "Z");
-	lua_pushinteger(L, BUTTON_UP);
+	lua_pushinteger(L, TB_BUTTON_UP);
 	lua_setglobal(L, "UP");
-	lua_pushinteger(L, BUTTON_DOWN);
+	lua_pushinteger(L, TB_BUTTON_DOWN);
 	lua_setglobal(L, "DOWN");
-	lua_pushinteger(L, BUTTON_LEFT);
+	lua_pushinteger(L, TB_BUTTON_LEFT);
 	lua_setglobal(L, "LEFT");
-	lua_pushinteger(L, BUTTON_RIGHT);
+	lua_pushinteger(L, TB_BUTTON_RIGHT);
 	lua_setglobal(L, "RIGHT");
-	lua_pushinteger(L, BUTTON_START);
+	lua_pushinteger(L, TB_BUTTON_START);
 	lua_setglobal(L, "START");
-    lua_pushinteger(L, BUTTON_SELECT);
+    lua_pushinteger(L, TB_BUTTON_SELECT);
 	lua_setglobal(L, "SELECT");
 
     lua_pushcfunction(L, lua_sprite);
@@ -350,13 +350,13 @@ int lua_bpm(lua_State* L) {
 }
 
 int lua_btn(lua_State* L) {
-    BUTTON btn = luaL_checkinteger(L, 1);
+    enum TinyBitButton btn = luaL_checkinteger(L, 1);
     lua_pushboolean(L, input_btn(btn));
     return 1;
 }
 
 int lua_btnp(lua_State* L) {
-    BUTTON btn = luaL_checkinteger(L, 1);
+    enum TinyBitButton btn = luaL_checkinteger(L, 1);
     lua_pushboolean(L, input_btnp(btn));
     return 1;
 }

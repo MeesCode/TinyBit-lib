@@ -1,9 +1,9 @@
 #ifndef LUA_FUNCTIONS_H
 #define LUA_FUNCTIONS_H
 
-#include "lua.h"
-#include "lualib.h"
-#include "lauxlib.h"
+#include "lua/lua.h"
+#include "lua/lualib.h"
+#include "lua/lauxlib.h"
 
 void lua_setup();
 
