@@ -20,8 +20,6 @@
 struct TinyBitMemory* tinybit_memory;
 
 size_t cartridge_index = 0; // index for cartridge buffer
-//uint8_t source_buffer[TB_CARTRIDGE_WIDTH * TB_CARTRIDGE_HEIGHT * 4 - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 4]; // max source size
-char source_buffer[4096];
 int frame_timer = 0;
 lua_State* L;
 
@@ -36,8 +34,8 @@ void decode_pixel(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h
 
     // source code
     else if (cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2 < TB_CARTRIDGE_WIDTH * TB_CARTRIDGE_HEIGHT * 2) {
-        if(cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2 < sizeof(source_buffer)) {
-            source_buffer[cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
+        if(cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2 < sizeof(tinybit_memory->script)) {
+            tinybit_memory->script[cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
         }
     }
 
@@ -66,7 +64,7 @@ bool tinybit_feed_catridge(uint8_t* buffer, size_t size){
 }
 
 char* tinybit_get_source() {
-    return source_buffer;
+    return tinybit_memory->script;
 }
 
 bool tinybit_start(){
@@ -74,7 +72,7 @@ bool tinybit_start(){
     pngle_destroy(pngle);
 
      // load lua file
-    if (luaL_dostring(L, source_buffer) == LUA_OK) {
+    if (luaL_dostring(L, tinybit_memory->script) == LUA_OK) {
         lua_pop(L, lua_gettop(L));
     } else{
         return false; // error in lua code
