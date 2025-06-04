@@ -3,12 +3,12 @@
 
 #include <stdint.h>
 
-extern uint32_t fillColor;
-extern uint32_t strokeColor;
+extern uint16_t fillColor;
+extern uint16_t strokeColor;
 extern int strokeWidth;
 
-void set_fill_color(uint32_t);
-void set_stroke_color(uint32_t);
+void set_fill_color(uint16_t);
+void set_stroke_color(uint16_t);
 void set_stroke_width(uint32_t);
 
 void lua_setup_draw();

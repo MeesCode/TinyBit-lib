@@ -10,8 +10,8 @@
 #include "memory.h"
 #include "tinybit.h"
 
-uint32_t fillColor = 0;
-uint32_t strokeColor = 0;
+uint16_t fillColor = 0;
+uint16_t strokeColor = 0;
 int strokeWidth = 0;
 
 static const int sin_table[] = {
@@ -40,8 +40,32 @@ int fast_cos(int angle) {
     return fast_sin(angle + 90);
 }
 
-void blend(uint32_t* result, uint32_t fg, uint32_t bg) {
-    uint32_t alpha_fg = fg >> 24;
+uint16_t rgb8888_to_rgb4444(uint32_t color) {
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8) & 0xFF;
+    uint8_t b = color & 0xFF;
+    uint8_t a = (color >> 24) & 0xFF;
+    
+    return ((r >> 4) << 12) | ((g >> 4) << 8) | ((b >> 4) << 4) | (a >> 4);
+}
+
+uint32_t rgb4444_to_rgb8888(uint16_t color) {
+    uint8_t r = (color >> 12) & 0xF;
+    uint8_t g = (color >> 8) & 0xF;
+    uint8_t b = (color >> 4) & 0xF;
+    uint8_t a = color & 0xF;
+    
+    return ((uint32_t)(a | (a << 4)) << 24) | 
+           ((uint32_t)(r | (r << 4)) << 16) | 
+           ((uint32_t)(g | (g << 4)) << 8) | 
+           (uint32_t)(b | (b << 4));
+}
+
+void blend(uint16_t* result, uint16_t fg, uint16_t bg) {
+    uint32_t fg32 = rgb4444_to_rgb8888(fg);
+    uint32_t bg32 = rgb4444_to_rgb8888(bg);
+    
+    uint32_t alpha_fg = fg32 >> 24;
     
     if (alpha_fg == 255) {
         *result = fg;
@@ -51,15 +75,16 @@ void blend(uint32_t* result, uint32_t fg, uint32_t bg) {
         return;
     }
     
-    uint32_t alpha_bg = bg >> 24;
+    uint32_t alpha_bg = bg32 >> 24;
     uint32_t inv_alpha = 255 - alpha_fg;
     
-    uint32_t r = ((fg >> 16 & 0xff) * alpha_fg + (bg >> 16 & 0xff) * inv_alpha) / 255;
-    uint32_t g = ((fg >> 8 & 0xff) * alpha_fg + (bg >> 8 & 0xff) * inv_alpha) / 255;
-    uint32_t b = ((fg & 0xff) * alpha_fg + (bg & 0xff) * inv_alpha) / 255;
+    uint32_t r = ((fg32 >> 16 & 0xff) * alpha_fg + (bg32 >> 16 & 0xff) * inv_alpha) / 255;
+    uint32_t g = ((fg32 >> 8 & 0xff) * alpha_fg + (bg32 >> 8 & 0xff) * inv_alpha) / 255;
+    uint32_t b = ((fg32 & 0xff) * alpha_fg + (bg32 & 0xff) * inv_alpha) / 255;
     uint32_t a = alpha_fg + (alpha_bg * inv_alpha) / 255;
     
-    *result = (a << 24) | (r << 16) | (g << 8) | b;
+    uint32_t blended = (a << 24) | (r << 16) | (g << 8) | b;
+    *result = rgb8888_to_rgb4444(blended);
 }
 
 int millis() {
@@ -81,17 +106,17 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
     int scaleX_fixed = (sourceW << 16) / targetW;
     int scaleY_fixed = (sourceH << 16) / targetH;
     
-    uint32_t* dst = (uint32_t*)&tinybit_memory->display[((targetY + clipStartY) * TB_SCREEN_WIDTH + targetX + clipStartX) * 4];
+    uint16_t* dst = (uint16_t*)&tinybit_memory->display[((targetY + clipStartY) * TB_SCREEN_WIDTH + targetX + clipStartX) * 2];
     
     for (int y = clipStartY; y < clipEndY; ++y) {
         int sourcePixelY = sourceY + ((y * scaleY_fixed) >> 16);
-        uint32_t* src_row = (uint32_t*)&tinybit_memory->spritesheet[sourcePixelY * TB_SCREEN_WIDTH * 4];
+        uint16_t* src_row = (uint16_t*)&tinybit_memory->spritesheet[sourcePixelY * TB_SCREEN_WIDTH * 2];
         
         for (int x = clipStartX; x < clipEndX; ++x) {
             int sourcePixelX = sourceX + ((x * scaleX_fixed) >> 16);
-            uint32_t srcColor = src_row[sourcePixelX];
+            uint16_t srcColor = src_row[sourcePixelX];
             
-            if ((srcColor >> 24) > 0) {
+            if ((srcColor & 0xF) > 0) {
                 blend(dst, srcColor, *dst);
             }
             dst++;
@@ -108,12 +133,12 @@ void draw_rect(int x, int y, int w, int h) {
     
     if (clipX >= TB_SCREEN_WIDTH || clipY >= TB_SCREEN_HEIGHT || clipW <= 0 || clipH <= 0) return;
     
-    uint32_t* display = (uint32_t*)&tinybit_memory->display;
+    uint16_t* display = (uint16_t*)&tinybit_memory->display;
     
     if (strokeWidth > 0) {
         for (int i = 0; i < strokeWidth && i < clipH; i++) {
-            uint32_t* top_row = &display[(clipY + i) * TB_SCREEN_WIDTH + clipX];
-            uint32_t* bottom_row = &display[(clipY + clipH - 1 - i) * TB_SCREEN_WIDTH + clipX];
+            uint16_t* top_row = &display[(clipY + i) * TB_SCREEN_WIDTH + clipX];
+            uint16_t* bottom_row = &display[(clipY + clipH - 1 - i) * TB_SCREEN_WIDTH + clipX];
             
             for (int j = 0; j < clipW; j++) {
                 blend(&top_row[j], strokeColor, top_row[j]);
@@ -125,8 +150,8 @@ void draw_rect(int x, int y, int w, int h) {
         
         for (int j = strokeWidth; j < clipH - strokeWidth; j++) {
             for (int i = 0; i < strokeWidth && i < clipW; i++) {
-                uint32_t* left_pixel = &display[(clipY + j) * TB_SCREEN_WIDTH + clipX + i];
-                uint32_t* right_pixel = &display[(clipY + j) * TB_SCREEN_WIDTH + clipX + clipW - 1 - i];
+                uint16_t* left_pixel = &display[(clipY + j) * TB_SCREEN_WIDTH + clipX + i];
+                uint16_t* right_pixel = &display[(clipY + j) * TB_SCREEN_WIDTH + clipX + clipW - 1 - i];
                 
                 blend(left_pixel, strokeColor, *left_pixel);
                 if (clipW - 1 - i != i) {
@@ -143,7 +168,7 @@ void draw_rect(int x, int y, int w, int h) {
     
     if (fillW > 0 && fillH > 0) {
         for (int j = 0; j < fillH; j++) {
-            uint32_t* row = &display[(clipY + fillStartY + j) * TB_SCREEN_WIDTH + clipX + fillStartX];
+            uint16_t* row = &display[(clipY + fillStartY + j) * TB_SCREEN_WIDTH + clipX + fillStartX];
             for (int i = 0; i < fillW; i++) {
                 blend(&row[i], fillColor, row[i]);
             }
@@ -163,7 +188,7 @@ void draw_oval(int x, int y, int w, int h) {
     int strokeRx2 = strokeRx * strokeRx;
     int strokeRy2 = strokeRy * strokeRy;
     
-    uint32_t* display = (uint32_t*)&tinybit_memory->display;
+    uint16_t* display = (uint16_t*)&tinybit_memory->display;
     
     for (int j = 0; j < h; j++) {
         int dy = j - ry;
@@ -181,7 +206,7 @@ void draw_oval(int x, int y, int w, int h) {
             int outer_test = dx2 * ry2 + dy2 * rx2;
             
             if (outer_test <= rx2 * ry2) {
-                uint32_t* pixel = &display[py * TB_SCREEN_WIDTH + px];
+                uint16_t* pixel = &display[py * TB_SCREEN_WIDTH + px];
                 
                 if (strokeWidth > 0 && strokeRx > 0 && strokeRy > 0) {
                     int inner_test = dx2 * strokeRy2 + dy2 * strokeRx2;
@@ -201,18 +226,20 @@ void draw_oval(int x, int y, int w, int h) {
 
 void set_stroke(int width, int r, int g, int b, int a) {
     strokeWidth = width >= 0 ? width : 0;
-    strokeColor = (r & 0xFF) | ((g & 0xFF) << 8) | ((b & 0xFF) << 16) | ((a & 0xFF) << 24);
+    uint32_t color32 = (a & 0xFF) << 24 | (r & 0xFF) << 16 | (g & 0xFF) << 8 | (b & 0xFF);
+    strokeColor = rgb8888_to_rgb4444(color32);
 }
 
 void set_fill(int r, int g, int b, int a) {
-    fillColor = (r & 0xFF) | ((g & 0xFF) << 8) | ((b & 0xFF) << 16) | ((a & 0xFF) << 24);
+    uint32_t color32 = (a & 0xFF) << 24 | (r & 0xFF) << 16 | (g & 0xFF) << 8 | (b & 0xFF);
+    fillColor = rgb8888_to_rgb4444(color32);
 }
 
 void draw_pixel(int x, int y) {
     if(x < 0 || x >= TB_SCREEN_WIDTH || y < 0 || y >= TB_SCREEN_HEIGHT) {
         return;
     }
-    uint32_t* pixel = (uint32_t*)&tinybit_memory->display[(y * TB_SCREEN_WIDTH + x) * 4];
+    uint16_t* pixel = (uint16_t*)&tinybit_memory->display[(y * TB_SCREEN_WIDTH + x) * 2];
     blend(pixel, fillColor, *pixel);
 }
 
@@ -248,11 +275,11 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
                 if (sourcePixelX >= sourceX && sourcePixelX < sourceX + sourceW &&
                     sourcePixelY >= sourceY && sourcePixelY < sourceY + sourceH) {
                     
-                    uint32_t* src = (uint32_t*)&tinybit_memory->spritesheet[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 4];
-                    uint32_t srcColor = *src;
+                    uint16_t* src = (uint16_t*)&tinybit_memory->spritesheet[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
+                    uint16_t srcColor = *src;
                     
-                    if ((srcColor >> 24) > 0) {
-                        uint32_t* dst = (uint32_t*)&tinybit_memory->display[((targetY + y) * TB_SCREEN_WIDTH + targetX + x) * 4];
+                    if ((srcColor & 0xF) > 0) {
+                        uint16_t* dst = (uint16_t*)&tinybit_memory->display[((targetY + y) * TB_SCREEN_WIDTH + targetX + x) * 2];
                         blend(dst, srcColor, *dst);
                     }
                 }
