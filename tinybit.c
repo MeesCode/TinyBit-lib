@@ -30,14 +30,14 @@ pngle_t *pngle;
 void decode_pixel(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
 {
     // spritesheet data
-    if (cartridge_index < TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 4) {
+    if (cartridge_index < TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) {
         tinybit_memory->spritesheet[cartridge_index] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
     }
 
     // source code
-    else if (cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 4 < TB_CARTRIDGE_WIDTH * TB_CARTRIDGE_HEIGHT * 4) {
-        if(cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 4 < sizeof(source_buffer)) {
-            source_buffer[cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 4] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
+    else if (cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2 < TB_CARTRIDGE_WIDTH * TB_CARTRIDGE_HEIGHT * 2) {
+        if(cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2 < sizeof(source_buffer)) {
+            source_buffer[cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
         }
     }
 
@@ -63,6 +63,10 @@ void tinybit_init(struct TinyBitMemory* memory, uint8_t* bs) {
 
 bool tinybit_feed_catridge(uint8_t* buffer, size_t size){
     return pngle_feed(pngle, buffer, size) != -2; // -2 means error
+}
+
+char* tinybit_get_source() {
+    return source_buffer;
 }
 
 bool tinybit_start(){

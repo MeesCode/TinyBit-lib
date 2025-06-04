@@ -48,5 +48,6 @@ void tinybit_init(struct TinyBitMemory* memory, uint8_t* bs);
 bool tinybit_feed_catridge(uint8_t* cartridge_buffer, size_t bytes);
 bool tinybit_frame();
 bool tinybit_start();
+char* tinybit_get_source();
 
 #endif
