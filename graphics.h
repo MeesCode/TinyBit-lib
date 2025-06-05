@@ -3,15 +3,14 @@
 
 #include <stdint.h>
 
-extern uint16_t fillColor;
-extern uint16_t strokeColor;
+struct Color{
+    uint8_t r, g, b, a;
+};
+
+extern uint8_t fillColor[2];
+extern uint8_t strokeColor[2];
+
 extern int strokeWidth;
-
-void set_fill_color(uint16_t);
-void set_stroke_color(uint16_t);
-void set_stroke_width(uint32_t);
-
-void lua_setup_draw();
 
 int millis();
 int random_range(int, int);

@@ -3,7 +3,7 @@
 
 extern int cursorX;
 extern int cursorY;
-extern uint32_t textColor;
+extern uint8_t textColor[2];
 
 extern char characters[16 * 8];
 

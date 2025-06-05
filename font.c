@@ -5,12 +5,13 @@
 #include "memory.h"
 #include "font.h"
 #include "assets/basic_font.h"
+#include "tinybit.h"
 
 int cursorX = 0;
 int cursorY = 0;
 const int fontWidth = 4;
 const int fontHeight = 6;
-uint32_t textColor = 0xffffffff;
+uint8_t textColor[2];
 
 char characters[16 * 8] = {
 	'?', '"', '%', '\'', '(', ')', '*', '+', ',', '-', '.', '/', '!',  ' ', ' ', ' ',
@@ -24,7 +25,8 @@ char characters[16 * 8] = {
 };
 
 void font_text_color(int r, int g, int b, int a) {
-	textColor = (r & 0xFF) | ((g & 0xFF) << 8) | ((b & 0xFF) << 16) | ((a & 0xFF) << 24);
+	textColor[0] = (r & 0xF0) | ((g >> 4) & 0x0F);
+	textColor[1] = (b & 0xF0) | ((a >> 4) & 0x0F);
 }
 
 void font_cursor(int x, int y) {
@@ -37,7 +39,6 @@ void font_prints(const char* str) {
 	int location = 0;
 
 	int startX = cursorX;
-	uint32_t fillBackup = fillColor;
 
 	while (*ptr) {
 
@@ -58,21 +59,28 @@ void font_prints(const char* str) {
 			}
 		}
 
-		// draw the character using the draw_pixel function
+		// draw the character using direct pixel blending
 		int charRow = location / 16;
 		int charCol = location % 16;
 
 		for (int y = 0; y < fontHeight; y++) {
 			for (int x = 0; x < fontWidth; x++) {
-				int byteIndex = (charRow * (fontHeight+2)+y) * 16 + charCol;
-				int bitPosition = 7 - x;
-				uint8_t font_byte = basic_font[byteIndex];
-				if ((font_byte >> bitPosition) & 1) {
-					fillColor = textColor;
-					draw_pixel(cursorX + x, cursorY + y);
-				} else {
-					fillColor = fillBackup;
-					draw_pixel(cursorX + x, cursorY + y);
+				int px = cursorX + x;
+				int py = cursorY + y;
+				
+				if (px >= 0 && px < TB_SCREEN_WIDTH && py >= 0 && py < TB_SCREEN_HEIGHT) {
+					int byteIndex = (charRow * (fontHeight+2)+y) * 16 + charCol;
+					int bitPosition = 7 - x;
+					uint8_t font_byte = basic_font[byteIndex];
+					uint8_t* pixel = &tinybit_memory->display[(py * TB_SCREEN_WIDTH + px) * 2];
+					
+					if ((font_byte >> bitPosition) & 1) {
+						blend(pixel, textColor, pixel);
+					}
+					else {
+						blend(pixel, fillColor, pixel);
+					}
+					// Don't draw background pixels - leave existing content
 				}
 			}
 		}
@@ -81,5 +89,4 @@ void font_prints(const char* str) {
 		ptr++;
 	}
 
-	fillColor = fillBackup;
 }
