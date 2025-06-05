@@ -40,47 +40,24 @@ int fast_cos(int angle) {
     return fast_sin(angle + 90);
 }
 
-uint16_t rgb8888_to_rgb4444(uint32_t color) {
-    uint8_t r = (color >> 24) & 0xFF;
-    uint8_t g = (color >> 16) & 0xFF;
-    uint8_t b = (color >> 8) & 0xFF;
-    uint8_t a = color & 0xFF;
+void blend(uint16_t* result_ptr, uint16_t fg, uint16_t bg) {
+    uint8_t* result_bytes = (uint8_t*)result_ptr;
     
-    // Convert RGBA to BARG format: 0xBARG
-    return ((b >> 4) & 0xF) << 12 | ((a >> 4) & 0xF) << 8 | ((r >> 4) & 0xF) << 4 | ((g >> 4) & 0xF);
-}
-
-uint32_t rgb4444_to_rgb8888(uint16_t color) {
-    // Extract from BARG format: 0xBARG
-    uint32_t b4 = (color >> 12) & 0xF;
-    uint32_t a4 = (color >> 8) & 0xF;
-    uint32_t r4 = (color >> 4) & 0xF;
-    uint32_t g4 = color & 0xF;
-    
-    uint32_t r = r4 << 4;
-    uint32_t g = g4 << 4;
-    uint32_t b = b4 << 4;
-    uint32_t a = a4 << 4;
-    
-    return (r & 0xFF) << 24 | (g & 0xFF) << 16 | (b & 0xFF) << 8 | (a & 0xFF);
-}
-
-void blend(uint16_t* result, uint16_t fg, uint16_t bg) {
-    // Extract alpha from BARG format (bits 11-8)
+    // Extract BARG from 16-bit values 
+    uint8_t fg_b = (fg >> 12) & 0xF;
     uint8_t fg_a = (fg >> 8) & 0xF;
+    uint8_t fg_r = (fg >> 4) & 0xF;
+    uint8_t fg_g = fg & 0xF;
     
     if (fg_a == 0xF) {
-        *result = fg;
+        // Store as bytes: byte0=rrrrgggg, byte1=bbbbaaaa
+        result_bytes[0] = (fg_r << 4) | fg_g;
+        result_bytes[1] = (fg_b << 4) | fg_a;
         return;
     }
     if (fg_a == 0) {
         return;
     }
-    
-    // Extract BARG components
-    uint8_t fg_b = (fg >> 12) & 0xF;
-    uint8_t fg_r = (fg >> 4) & 0xF;
-    uint8_t fg_g = fg & 0xF;
     
     uint8_t bg_b = (bg >> 12) & 0xF;
     uint8_t bg_a = (bg >> 8) & 0xF;
@@ -94,8 +71,9 @@ void blend(uint16_t* result, uint16_t fg, uint16_t bg) {
     uint8_t out_r = (fg_r * fg_a + bg_r * inv_alpha) >> 4;
     uint8_t out_g = (fg_g * fg_a + bg_g * inv_alpha) >> 4;
     
-    // Pack back into BARG format
-    *result = (out_b << 12) | (out_a << 8) | (out_r << 4) | out_g;
+    // Store as bytes to match main.c format: byte0=rrrrgggg, byte1=bbbbaaaa
+    result_bytes[0] = (out_r << 4) | out_g;
+    result_bytes[1] = (out_b << 4) | out_a;
 }
 
 int millis() {
@@ -237,13 +215,11 @@ void draw_oval(int x, int y, int w, int h) {
 
 void set_stroke(int width, int r, int g, int b, int a) {
     strokeWidth = width >= 0 ? width : 0;
-    uint32_t color32 = (r & 0xFF) << 24 | (g & 0xFF) << 16 | (b & 0xFF) << 8 | (a & 0xFF);
-    strokeColor = rgb8888_to_rgb4444(color32);
+    strokeColor = ((b & 0xF0) << 8) | ((a & 0xF0) << 4) | (r & 0xF0) | ((b & 0xF0) >> 4);
 }
 
 void set_fill(int r, int g, int b, int a) {
-    uint32_t color32 = (r & 0xFF) << 24 | (g & 0xFF) << 16 | (b & 0xFF) << 8 | (a & 0xFF);
-    fillColor = rgb8888_to_rgb4444(color32);
+    fillColor = ((b & 0xF0) << 8) | ((a & 0xF0) << 4) | (r & 0xF0) | ((b & 0xF0) >> 4);
 }
 
 void draw_pixel(int x, int y) {
