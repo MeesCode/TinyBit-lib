@@ -63,10 +63,6 @@ bool tinybit_feed_catridge(uint8_t* buffer, size_t size){
     return pngle_feed(pngle, buffer, size) != -2; // -2 means error
 }
 
-char* tinybit_get_source() {
-    return tinybit_memory->script;
-}
-
 bool tinybit_start(){
 
     pngle_destroy(pngle);

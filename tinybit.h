@@ -17,15 +17,15 @@
 #define TB_SCREEN_HEIGHT 128
 
 // Memory sizes
-#define TB_MEM_SIZE 0x30000 // 192 KiB
+#define TB_MEM_SIZE 0x14000 // 80Kb
 #define TB_MEM_SPRITESHEET_START 0x00000
-#define TB_MEM_SPRITESHEET_SIZE 0x08000
+#define TB_MEM_SPRITESHEET_SIZE 0x08000 // 32Kb
 #define TB_MEM_DISPLAY_START 0x08000
-#define TB_MEM_DISPLAY_SIZE 0x08000
-#define TB_MEM_SCRIPT_START 0x08000
-#define TB_MEM_SCRIPT_SIZE 0x02000
-#define TB_MEM_USER_START 0x10000
-#define TB_MEM_USER_SIZE 0x01000
+#define TB_MEM_DISPLAY_SIZE 0x08000 // 32Kb
+#define TB_MEM_SCRIPT_START 0x10000
+#define TB_MEM_SCRIPT_SIZE 0x03000 // 12Kb
+#define TB_MEM_USER_START 0x13000
+#define TB_MEM_USER_SIZE 0x01000 // 4Kb
 
 struct TinyBitMemory {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
@@ -51,6 +51,5 @@ void tinybit_init(struct TinyBitMemory* memory, uint8_t* bs);
 bool tinybit_feed_catridge(uint8_t* cartridge_buffer, size_t bytes);
 bool tinybit_frame();
 bool tinybit_start();
-char* tinybit_get_source();
 
 #endif
