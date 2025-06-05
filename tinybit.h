@@ -8,29 +8,41 @@
 #include "lua/lualib.h"
 #include "lua/lauxlib.h"
 
+#if defined(_MSC_VER)
+    // Microsoft Visual Studio
+    #define PACKED_STRUCT(name) __pragma(pack(push, 1)) struct name __pragma(pack(pop))
+#elif defined(__GNUC__) || defined(__clang__)
+    // GCC or Clang
+    #define PACKED_STRUCT(name) struct __attribute__((__packed__)) name
+#else
+    // Fallback (may need adjustment per compiler)
+    #define PACKED_STRUCT(name) struct name
+    #pragma message("Packing is not defined for this compiler. Please define PACKED_STRUCT manually.")
+#endif
+
 // cartridge dimensions
-#define TB_CARTRIDGE_WIDTH 336
-#define TB_CARTRIDGE_HEIGHT 376
+#define TB_CARTRIDGE_WIDTH 200
+#define TB_CARTRIDGE_HEIGHT 230
 
 // Screen dimensions
 #define TB_SCREEN_WIDTH 128
 #define TB_SCREEN_HEIGHT 128
 
 // Memory sizes
-#define TB_MEM_SIZE 0x14000 // 80Kb
 #define TB_MEM_SPRITESHEET_START 0x00000
-#define TB_MEM_SPRITESHEET_SIZE 0x08000 // 32Kb
-#define TB_MEM_DISPLAY_START 0x08000
-#define TB_MEM_DISPLAY_SIZE 0x08000 // 32Kb
-#define TB_MEM_SCRIPT_START 0x10000
-#define TB_MEM_SCRIPT_SIZE 0x03000 // 12Kb
-#define TB_MEM_USER_START 0x13000
-#define TB_MEM_USER_SIZE 0x01000 // 4Kb
+#define TB_MEM_SPRITESHEET_SIZE  0x08000 // 32Kb
+#define TB_MEM_DISPLAY_START     (TB_MEM_SPRITESHEET_START + TB_MEM_SPRITESHEET_SIZE)
+#define TB_MEM_DISPLAY_SIZE      0x08000 // 32Kb
+#define TB_MEM_SCRIPT_START      (TB_MEM_DISPLAY_START + TB_MEM_DISPLAY_SIZE)
+#define TB_MEM_SCRIPT_SIZE       0x03000 // 12Kb
+#define TB_MEM_USER_START        (TB_MEM_SCRIPT_START + TB_MEM_SCRIPT_SIZE)
+#define TB_MEM_USER_SIZE         0x01000 // 4Kb
+#define TB_MEM_SIZE              (TB_MEM_SPRITESHEET_SIZE + TB_MEM_DISPLAY_SIZE + TB_MEM_SCRIPT_SIZE + TB_MEM_USER_SIZE) // 80Kb
 
-struct TinyBitMemory {
+PACKED_STRUCT(TinyBitMemory) {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
     uint8_t display[TB_MEM_DISPLAY_SIZE];
-	uint8_t script[TB_MEM_SPRITESHEET_SIZE]; 
+	uint8_t script[TB_MEM_SCRIPT_SIZE];
     uint8_t user[TB_MEM_USER_SIZE];
 };
 
