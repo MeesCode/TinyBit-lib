@@ -70,17 +70,20 @@ void font_prints(const char* str) {
 				
 				if (px >= 0 && px < TB_SCREEN_WIDTH && py >= 0 && py < TB_SCREEN_HEIGHT) {
 					int byteIndex = (charRow * (fontHeight+2)+y) * 16 + charCol;
-					int bitPosition = 7 - x;
-					uint8_t font_byte = basic_font[byteIndex];
-					uint8_t* pixel = &tinybit_memory->display[(py * TB_SCREEN_WIDTH + px) * 2];
 					
-					if ((font_byte >> bitPosition) & 1) {
-						blend(pixel, textColor, pixel);
+					// Bounds check for font array access
+					if (byteIndex >= 0 && byteIndex < sizeof(basic_font)) {
+						int bitPosition = 7 - x;
+						uint8_t font_byte = basic_font[byteIndex];
+						uint8_t* pixel = &tinybit_memory->display[(py * TB_SCREEN_WIDTH + px) * 2];
+						
+						if ((font_byte >> bitPosition) & 1) {
+							blend(pixel, textColor, pixel);
+						}
+						else {
+							blend(pixel, fillColor, pixel);
+						}
 					}
-					else {
-						blend(pixel, fillColor, pixel);
-					}
-					// Don't draw background pixels - leave existing content
 				}
 			}
 		}

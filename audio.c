@@ -1,5 +1,3 @@
-
-
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -9,12 +7,9 @@
 #define M_PI 3.14159265358979323846
 #define GAIN 500
 
-// SDL_AudioDeviceID audio_device;
-// SDL_AudioSpec audio_spec;
 int bpm = 100;
 int channel = 0;
 int volume = 10;
-
 
 const float frequencies[12][7] = {
     { 25.96f, 51.91f, 103.83f, 207.65f, 415.30f, 830.61f, 1661.22f },
@@ -32,10 +27,7 @@ const float frequencies[12][7] = {
 };
 
 void audio_init(){
-    // set up audio
-    // SDL_Init(SDL_INIT_AUDIO);
-    // Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
-    // Mix_AllocateChannels(4);
+    // Audio system not implemented - SDL/Mix_* functions would go here
 }
 
 void queue_freq_sin(float freq, int ms, int vol, int chan) {
@@ -45,12 +37,14 @@ void queue_freq_sin(float freq, int ms, int vol, int chan) {
     float x = 0;
     int samples = (44100/1000) * ms;
     int16_t* buffer = (int16_t*)calloc(samples, sizeof(int16_t));
+    if (!buffer) return; // Memory allocation check
+    
     for (int i = 0; i < samples; i++) {
         x += 2 * M_PI * freq / 44100;
         buffer[i] = sin(x) * GAIN * vol;
     }
-    // Mix_Chunk* chunk = Mix_QuickLoad_RAW((Uint8*)buffer, samples * sizeof(int16_t));
-    // Mix_PlayChannel(chan, chunk, 0);
+    // Audio playback would happen here
+    free(buffer);
 }
 
 void queue_freq_saw(float freq, int ms, int vol, int chan) {
@@ -60,13 +54,15 @@ void queue_freq_saw(float freq, int ms, int vol, int chan) {
     float x = 0;
     int samples = (44100/1000) * ms;
     int16_t* buffer = (int16_t*)malloc(samples * sizeof(int16_t));
+    if (!buffer) return; // Memory allocation check
+    
     for (int i = 0; i < samples; i++) {
         x += freq / 44100;
         if (x >= 1.0f) x -= 1.0f;
         buffer[i] = (x * 2 - 1) * GAIN * vol; 
     }
-    // Mix_Chunk* chunk = Mix_QuickLoad_RAW((Uint8*)buffer, samples * sizeof(int16_t));
-    // Mix_PlayChannel(chan, chunk, 0);
+    // Audio playback would happen here
+    free(buffer);
 }
 
 void queue_freq_square(float freq, int ms, int vol, int chan) {
@@ -76,36 +72,39 @@ void queue_freq_square(float freq, int ms, int vol, int chan) {
     float x = 0;
     int samples = (44100/1000) * ms;
     int16_t* buffer = (int16_t*)malloc(samples * sizeof(int16_t));
+    if (!buffer) return; // Memory allocation check
+    
     for (int i = 0; i < samples; i++) {
         x += freq / 44100;
         if (x >= 1.0f) x -= 1.0f;
         buffer[i] = (x < 0.5f ? -1 : 1) * GAIN * vol; 
     }
-    // Mix_Chunk* chunk = Mix_QuickLoad_RAW((Uint8*)buffer, samples * sizeof(int16_t));
-    // Mix_PlayChannel(chan, chunk, 0);
+    // Audio playback would happen here
+    free(buffer);
 }
 
 void play_noise(int eights, int vol, int chan) {
-    // if(vol < 0 || vol > 10 || chan < 0 || chan > 3) {
-    //     return;
-    // }
-    // int ms = ((60000 / bpm) / 8) * eights;
-    // int samples = (44100/1000) * ms;
-    // int16_t* buffer = (int16_t*)malloc(samples * sizeof(int16_t));
-    // for (int i = 0; i < samples; i++) {
-    //     buffer[i] = (rand() % ((GAIN * vol) * 2)) - (GAIN * vol); 
-    // }
-    // Mix_Chunk* chunk = Mix_QuickLoad_RAW((Uint8*)buffer, samples * sizeof(int16_t));
-    // Mix_PlayChannel(chan, chunk, 0);
+    //if(vol < 0 || vol > 10 || chan < 0 || chan > 3) {
+    //    return;
+    //}
+    //int ms = ((60000 / bpm) / 8) * eights;
+    //int samples = (44100/1000) * ms;
+    //int16_t* buffer = (int16_t*)malloc(samples * sizeof(int16_t));
+    //if (!buffer) return; // Memory allocation check
+    //
+    //for (int i = 0; i < samples; i++) {
+    //    buffer[i] = (rand() % ((GAIN * vol) * 2)) - (GAIN * vol); 
+    //}
+    //// Audio playback would happen here
+    //free(buffer);
 }
 
 void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan) {
-
-    // // tone 
-    // if (octave < 0 || octave > 6 || tone < 0 || tone > 11 || eights < 0 || vol < 0 || vol > 10 || chan < 0 || chan > 3) {
+    // Validate parameters
+    // if (octave < 0 || octave > 6 || tone < 0 || tone > 11 || eights < 0 || 
+    //     vol < 0 || vol > 10 || chan < 0 || chan > 3) {
     //     return;
     // }
-
 
     // int ms = ((60000 / bpm) / 8) * eights;
     // float freq = frequencies[tone][octave];
@@ -124,19 +123,19 @@ void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan)
 }
 
 void set_bpm(int new_bpm) {
-    bpm = new_bpm;
+    if (new_bpm > 0) {
+        bpm = new_bpm;
+    }
 }
 
 void set_channel(int new_chan) {
-    if(new_chan < 0 || new_chan > 3) {
-        return;
+    if(new_chan >= 0 && new_chan <= 3) {
+        channel = new_chan;
     }
-    channel = new_chan;
 }
 
 void set_volume(int new_vol) {
-    if(new_vol < 0 || new_vol > 10) {
-        return;
+    if(new_vol >= 0 && new_vol <= 10) {
+        volume = new_vol;
     }
-    volume = new_vol;
 }

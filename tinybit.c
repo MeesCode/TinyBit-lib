@@ -27,15 +27,19 @@ pngle_t *pngle;
 
 void decode_pixel(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
 {
-    // spritesheet data
-    if (cartridge_index < TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) {
-        tinybit_memory->spritesheet[cartridge_index] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
+    if (!rgba || !tinybit_memory) {
+        return; // Safety check for null pointers
     }
 
+    // spritesheet data
+    if (cartridge_index < TB_MEM_SPRITESHEET_SIZE) {
+        tinybit_memory->spritesheet[cartridge_index] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
+    }
     // source code
-    else if (cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2 < TB_CARTRIDGE_WIDTH * TB_CARTRIDGE_HEIGHT * 2) {
-        if(cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2 < sizeof(tinybit_memory->script)) {
-            tinybit_memory->script[cartridge_index - TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
+    else {
+        size_t script_offset = cartridge_index - TB_MEM_SPRITESHEET_SIZE;
+        if (script_offset < TB_MEM_SCRIPT_SIZE) {
+            tinybit_memory->script[script_offset] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
         }
     }
 
@@ -43,10 +47,13 @@ void decode_pixel(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h
     cartridge_index++;
 }
 
-void tinybit_init(struct TinyBitMemory* memory, uint8_t* bs) {
+void tinybit_init(struct TinyBitMemory* memory, uint8_t* button_state_ptr) {
+    if (!memory || !button_state_ptr) {
+        return; // Error: null pointer
+    }
 
     tinybit_memory = memory;
-    button_state = bs;
+    button_state = button_state_ptr;
 
     pngle = pngle_new();
     pngle_set_draw_callback(pngle, decode_pixel);
@@ -59,7 +66,7 @@ void tinybit_init(struct TinyBitMemory* memory, uint8_t* bs) {
     lua_setup(L);
 }
 
-bool tinybit_feed_catridge(uint8_t* buffer, size_t size){
+bool tinybit_feed_cartridge(uint8_t* buffer, size_t size){
     return pngle_feed(pngle, buffer, size) != -2; // -2 means error
 }
 

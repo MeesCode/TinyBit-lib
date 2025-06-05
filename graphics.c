@@ -60,12 +60,12 @@ void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg) {
     uint8_t bg_b = bg[1] & 0xF0;
     uint8_t bg_a = (bg[1] & 0x0F) << 4;
     
-    uint8_t inv_alpha = 0xF0 - fg_a;
+    uint8_t inverse_alpha = 0xF0 - fg_a;
     
-    uint8_t out_r = (fg_r * fg_a + bg_r * inv_alpha) >> 8;
-    uint8_t out_g = (fg_g * fg_a + bg_g * inv_alpha) >> 8;
-    uint8_t out_b = (fg_b * fg_a + bg_b * inv_alpha) >> 8;
-    uint8_t out_a = fg_a + ((bg_a * inv_alpha) >> 8);
+    uint8_t out_r = (fg_r * fg_a + bg_r * inverse_alpha) >> 8;
+    uint8_t out_g = (fg_g * fg_a + bg_g * inverse_alpha) >> 8;
+    uint8_t out_b = (fg_b * fg_a + bg_b * inverse_alpha) >> 8;
+    uint8_t out_a = fg_a + ((bg_a * inverse_alpha) >> 8);
     
     // Pack back to byte format: byte[0]=rrrrgggg, byte[1]=bbbbaaaa
     result_bytes[0] = (out_r & 0xF0) | ((out_g >> 4) & 0x0F);
@@ -88,17 +88,17 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
     
     if (clipStartX >= clipEndX || clipStartY >= clipEndY) return;
     
-    int scaleX_fixed = (sourceW << 16) / targetW;
-    int scaleY_fixed = (sourceH << 16) / targetH;
+    int scale_x_fixed_point = (sourceW << 16) / targetW;
+    int scale_y_fixed_point = (sourceH << 16) / targetH;
     
     uint8_t* dst = &tinybit_memory->display[((targetY + clipStartY) * TB_SCREEN_WIDTH + targetX + clipStartX) * 2];
     
     for (int y = clipStartY; y < clipEndY; ++y) {
-        int sourcePixelY = sourceY + ((y * scaleY_fixed) >> 16);
+        int sourcePixelY = sourceY + ((y * scale_y_fixed_point) >> 16);
         uint8_t* src_row = &tinybit_memory->spritesheet[sourcePixelY * TB_SCREEN_WIDTH * 2];
         
         for (int x = clipStartX; x < clipEndX; ++x) {
-            int sourcePixelX = sourceX + ((x * scaleX_fixed) >> 16);
+            int sourcePixelX = sourceX + ((x * scale_x_fixed_point) >> 16);
             uint8_t* src_pixel = src_row + sourcePixelX * 2;
             blend(dst, src_pixel, dst);
             dst += 2;
@@ -238,8 +238,8 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
     
     if (clipStartX >= clipEndX || clipStartY >= clipEndY) return;
     
-    int scaleX_fixed = (sourceW << 16) / targetW;
-    int scaleY_fixed = (sourceH << 16) / targetH;
+    int scale_x_fixed_point = (sourceW << 16) / targetW;
+    int scale_y_fixed_point = (sourceH << 16) / targetH;
     
     for (int y = clipStartY; y < clipEndY; ++y) {
         for (int x = clipStartX; x < clipEndX; ++x) {
@@ -250,8 +250,8 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
             int rotY = ((relX * sinA + relY * cosA) >> 16) + centerY;
             
             if (rotX >= 0 && rotX < targetW && rotY >= 0 && rotY < targetH) {
-                int sourcePixelX = sourceX + ((rotX * scaleX_fixed) >> 16);
-                int sourcePixelY = sourceY + ((rotY * scaleY_fixed) >> 16);
+                int sourcePixelX = sourceX + ((rotX * scale_x_fixed_point) >> 16);
+                int sourcePixelY = sourceY + ((rotY * scale_y_fixed_point) >> 16);
                 
                 if (sourcePixelX >= sourceX && sourcePixelX < sourceX + sourceW &&
                     sourcePixelY >= sourceY && sourcePixelY < sourceY + sourceH) {
