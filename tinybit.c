@@ -75,7 +75,7 @@ bool tinybit_start(){
     pngle_destroy(pngle);
 
      // load lua file
-    if (luaL_dostring(L, tinybit_memory->script) == LUA_OK) {
+    if (luaL_dostring(L, (char*)tinybit_memory->script) == LUA_OK) {
         lua_pop(L, lua_gettop(L));
     } else{
         return false; // error in lua code

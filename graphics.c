@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 #include "graphics.h"
 #include "memory.h"
@@ -12,6 +13,8 @@
 uint8_t fillColor[2] = {0x00, 0x00};
 uint8_t strokeColor[2] = {0x00, 0x00}; 
 int strokeWidth = 0;
+
+static struct timeval start_time = {0, 0};
 
 static const int sin_table[] = {
     0, 1143, 2287, 3429, 4571, 5711, 6850, 7986, 9120, 10252, 11380,
@@ -73,7 +76,18 @@ void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg) {
 }
 
 int millis() {
-    return clock() / (CLOCKS_PER_SEC / 1000);
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    
+    if (start_time.tv_sec == 0 && start_time.tv_usec == 0) {
+        start_time = tv;
+        return 0;
+    }
+    
+    long elapsed_sec = tv.tv_sec - start_time.tv_sec;
+    long elapsed_usec = tv.tv_usec - start_time.tv_usec;
+    
+    return (elapsed_sec * 1000) + (elapsed_usec / 1000);
 }
 
 int random_range(int min, int max) {
