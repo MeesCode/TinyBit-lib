@@ -13,12 +13,6 @@ uint8_t fillColor[2] = { 0x00, 0x00 };
 uint8_t strokeColor[2] = { 0x00, 0x00 };
 int strokeWidth = 0;
 
-#ifdef _POSIX_C_SOURCE
-static struct timespec start_time = { 0, 0 };
-#else
-static clock_t start_time = 0;
-#endif
-
 static const int sin_table[] = {
     0, 1143, 2287, 3429, 4571, 5711, 6850, 7986, 9120, 10252, 11380,
     12504, 13625, 14742, 15854, 16961, 18064, 19160, 20251, 21336, 22414,
@@ -76,32 +70,6 @@ void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg) {
     // Pack back to byte format: byte[0]=rrrrgggg, byte[1]=bbbbaaaa
     result_bytes[0] = (out_r & 0xF0) | ((out_g >> 4) & 0x0F);
     result_bytes[1] = (out_b & 0xF0) | ((out_a >> 4) & 0x0F);
-}
-
-int millis() {
-#ifdef _POSIX_C_SOURCE
-    struct timespec current_time;
-    clock_gettime(CLOCK_MONOTONIC, &current_time);
-
-    if (start_time.tv_sec == 0 && start_time.tv_nsec == 0) {
-        start_time = current_time;
-        return 0;
-    }
-
-    long elapsed_sec = current_time.tv_sec - start_time.tv_sec;
-    long elapsed_nsec = current_time.tv_nsec - start_time.tv_nsec;
-
-    return (int)((elapsed_sec * 1000) + (elapsed_nsec / 1000000));
-#else
-    clock_t current_time = clock();
-    
-    if (start_time == 0) {
-        start_time = current_time;
-        return 0;
-    }
-    
-    return (int)((current_time - start_time) * 1000 / CLOCKS_PER_SEC);
-#endif
 }
 
 int random_range(int min, int max) {

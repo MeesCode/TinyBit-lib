@@ -6,6 +6,7 @@
 #include "lua/lauxlib.h"
 
 extern void (*log_func)(const char*);
+extern long frame_time;
 
 void lua_setup();
 

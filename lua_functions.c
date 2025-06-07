@@ -15,6 +15,7 @@
 
 char log_buffer[256];
 void (*log_func)(const char*);
+long frame_time = 0;
 
 void lua_setup(lua_State* L) {
     
@@ -238,7 +239,7 @@ int lua_sprite(lua_State* L) {
 }
 
 int lua_millis(lua_State* L) {
-    lua_Integer m = millis();
+    lua_Integer m = frame_time;
     lua_pushinteger(L, m);
     return 1;
 }

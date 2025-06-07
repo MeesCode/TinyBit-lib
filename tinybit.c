@@ -3,6 +3,8 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "lua_functions.h"
 #include "graphics.h"
@@ -16,6 +18,12 @@
 #include "lua/lauxlib.h"
 
 #include "pngle/pngle.h"
+
+#ifdef _POSIX_C_SOURCE
+static struct timespec start_time = { 0, 0 };
+#else
+static clock_t start_time = 0;
+#endif
 
 struct TinyBitMemory* tinybit_memory;
 
@@ -92,7 +100,36 @@ bool tinybit_start(){
     return true;
 }
 
+long tinybit_get_frame_time() {
+    #ifdef _POSIX_C_SOURCE
+        struct timespec current_time;
+        clock_gettime(CLOCK_MONOTONIC, &current_time);
+
+        if (start_time.tv_sec == 0 && start_time.tv_nsec == 0) {
+            start_time = current_time;
+            return 0;
+        }
+
+        long elapsed_sec = current_time.tv_sec - start_time.tv_sec;
+        long elapsed_nsec = current_time.tv_nsec - start_time.tv_nsec;
+
+        return (elapsed_sec * 1000) + (elapsed_nsec / 1000000);
+    #else
+        clock_t current_time = clock();
+        
+        if (start_time == 0) {
+            start_time = current_time;
+            return 0;
+        }
+        
+        return (current_time - start_time) * 1000 / CLOCKS_PER_SEC;
+    #endif
+}
+
 bool tinybit_frame() {
+
+    frame_time = tinybit_get_frame_time();
+
     // perform lua draw function every frame
     lua_getglobal(L, "_draw");
     if (lua_pcall(L, 0, 1, 0) == LUA_OK) {

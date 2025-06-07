@@ -12,7 +12,6 @@ extern uint8_t strokeColor[2];
 
 extern int strokeWidth;
 
-int millis();
 int random_range(int, int);
 void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH);
 void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees);
