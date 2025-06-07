@@ -5,8 +5,11 @@
 #include "lua/lualib.h"
 #include "lua/lauxlib.h"
 
+extern void (*log_func)(const char*);
+
 void lua_setup();
 
+int lua_log(lua_State* L);
 int lua_sprite(lua_State* L);
 int lua_millis(lua_State* L);
 int lua_random(lua_State* L);
@@ -27,7 +30,7 @@ int lua_cls(lua_State* L);
 int lua_peek(lua_State* L);
 int lua_poke(lua_State* L);
 int lua_cursor(lua_State* L);
-int lua_prints(lua_State* L);
+int lua_print(lua_State* L);
 int lua_text(lua_State* L);
 
 #endif

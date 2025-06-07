@@ -70,6 +70,14 @@ bool tinybit_feed_cartridge(uint8_t* buffer, size_t size){
     return pngle_feed(pngle, buffer, size) != -2; // -2 means error
 }
 
+void tinybit_set_log(void (*log_func_ptr)(const char*)){
+    if (!log_func_ptr) {
+        return; // Error: null pointer
+    }
+    
+    log_func = log_func_ptr;
+}
+
 bool tinybit_start(){
 
     pngle_destroy(pngle);

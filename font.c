@@ -34,7 +34,7 @@ void font_cursor(int x, int y) {
 	cursorY = y;
 }
 
-void font_prints(const char* str) {
+void font_print(const char* str) {
 	const char* ptr = str;
 	int location = 0;
 

@@ -3,6 +3,8 @@
 #include "lua/lualib.h"
 #include "lua/lauxlib.h"
 
+#include <string.h>
+
 #include "lua_functions.h"
 #include "graphics.h"
 #include "memory.h"
@@ -10,6 +12,9 @@
 #include "input.h"
 #include "audio.h"
 #include "tinybit.h"
+
+char log_buffer[256];
+void (*log_func)(const char*);
 
 void lua_setup(lua_State* L) {
     
@@ -143,10 +148,67 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "random");
     lua_pushcfunction(L, lua_cursor);
     lua_setglobal(L, "cursor");
-    lua_pushcfunction(L, lua_prints);
-    lua_setglobal(L, "prints");
+    lua_pushcfunction(L, lua_print);
+    lua_setglobal(L, "print");
     lua_pushcfunction(L, lua_text);
     lua_setglobal(L, "text");
+    lua_pushcfunction(L, lua_log);
+    lua_setglobal(L, "log");
+}
+
+int lua_log(lua_State* L) {
+
+    if (log_func == NULL) {
+        return 0; // No log function set
+    }
+
+    int log_buffer_index = 0;
+    int nargs = lua_gettop(L);
+
+    for (int i = 1; i <= nargs; i++) {
+        if (lua_isstring(L, i)) {
+            const char* str = lua_tostring(L, i);
+            size_t str_len = strlen(str);
+            size_t written = 0;
+            while (written < str_len) {
+                size_t space_left = sizeof(log_buffer) - log_buffer_index - 2; // reserve for space and null
+                size_t chunk = (str_len - written > space_left) ? space_left : (str_len - written);
+                if (chunk > 0) {
+                    memcpy(log_buffer + log_buffer_index, str + written, chunk);
+                    log_buffer_index += chunk;
+                    written += chunk;
+                }
+                if (written < str_len) {
+                    // Buffer full, flush and continue
+                    log_buffer[log_buffer_index] = '\0';
+                    log_func(log_buffer);
+                    log_buffer_index = 0;
+                }
+            }
+            // Always add a space after each argument
+            if (log_buffer_index < sizeof(log_buffer) - 2) {
+                log_buffer[log_buffer_index++] = ' ';
+            } else {
+                // Buffer full, flush and add space
+                log_buffer[log_buffer_index] = '\0';
+                log_func(log_buffer);
+                log_buffer_index = 0;
+                log_buffer[log_buffer_index++] = ' ';
+            }
+        }
+    }
+
+    // Add newline and flush
+    if (log_buffer_index < sizeof(log_buffer) - 1) {
+        log_buffer[log_buffer_index++] = '\n';
+    } else {
+        log_buffer[sizeof(log_buffer) - 2] = '\n';
+        log_buffer_index = sizeof(log_buffer) - 1;
+    }
+    log_buffer[log_buffer_index] = '\0';
+    log_func(log_buffer);
+
+    return 0;
 }
 
 int lua_sprite(lua_State* L) {
@@ -414,7 +476,7 @@ int lua_cursor(lua_State* L) {
     return 0;
 }
 
-int lua_prints(lua_State* L) {
+int lua_print(lua_State* L) {
 
     if (lua_gettop(L) != 1) {
         return 0;
@@ -422,6 +484,6 @@ int lua_prints(lua_State* L) {
 
     const char* str = luaL_checkstring(L, 1);
 
-    font_prints(str);
+    font_print(str);
     return 0;
 }

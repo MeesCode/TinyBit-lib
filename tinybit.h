@@ -63,5 +63,6 @@ void tinybit_init(struct TinyBitMemory* memory, uint8_t* button_state_ptr);
 bool tinybit_feed_cartridge(uint8_t* cartridge_buffer, size_t bytes);
 bool tinybit_frame();
 bool tinybit_start();
+void tinybit_set_log(void (*log_func_ptr)(const char*));
 
 #endif
