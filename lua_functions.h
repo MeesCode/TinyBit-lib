@@ -34,5 +34,8 @@ int lua_poke(lua_State* L);
 int lua_cursor(lua_State* L);
 int lua_print(lua_State* L);
 int lua_text(lua_State* L);
+int lua_poly_add(lua_State* L);
+int lua_poly_clear(lua_State* L);
+int poly(lua_State* L);
 
 #endif

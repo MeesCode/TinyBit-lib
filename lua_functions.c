@@ -157,6 +157,12 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "text");
     lua_pushcfunction(L, lua_log);
     lua_setglobal(L, "log");
+    lua_pushcfunction(L, lua_poly_add);
+    lua_setglobal(L, "poly_add");
+    lua_pushcfunction(L, lua_poly_clear);
+    lua_setglobal(L, "poly_clear");
+    lua_pushcfunction(L, poly);
+    lua_setglobal(L, "draw_polygon");
 }
 
 int lua_log(lua_State* L) {
@@ -342,6 +348,28 @@ int lua_oval(lua_State* L) {
     int h = (int)luaL_checknumber(L, 4);
 
     draw_oval(x, y, w, h);
+    return 0;
+}
+
+int lua_poly_add(lua_State* L) {
+    if (lua_gettop(L) != 2) {
+        return 0;
+    }
+
+    int x = (int)luaL_checknumber(L, 1);
+    int y = (int)luaL_checknumber(L, 2);
+
+    poly_add(x, y);
+    return 0;
+}
+
+int lua_poly_clear(lua_State* L) {
+    poly_clear();
+    return 0;
+}
+
+int poly(lua_State* L) {
+    draw_polygon();
     return 0;
 }
 

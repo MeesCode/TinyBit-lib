@@ -22,5 +22,8 @@ void set_fill(int r, int g, int b, int a);
 void draw_pixel(int x, int y);
 void draw_line(int x1, int y1, int x2, int y2);
 void draw_cls();
+void poly_add(int x, int y);
+void poly_clear();
+void draw_polygon();
 
 #endif

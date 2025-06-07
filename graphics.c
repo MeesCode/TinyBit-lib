@@ -13,6 +13,14 @@ uint8_t fillColor[2] = { 0x00, 0x00 };
 uint8_t strokeColor[2] = { 0x00, 0x00 };
 int strokeWidth = 0;
 
+#define MAX_POLYGON_POINTS 32
+typedef struct {
+    int x, y;
+} Point;
+
+static Point polygon_points[MAX_POLYGON_POINTS];
+static int polygon_point_count = 0;
+
 static const int sin_table[] = {
     0, 1143, 2287, 3429, 4571, 5711, 6850, 7986, 9120, 10252, 11380,
     12504, 13625, 14742, 15854, 16961, 18064, 19160, 20251, 21336, 22414,
@@ -326,4 +334,84 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
 
 void draw_cls() {
     memset(&tinybit_memory->display, 0, TB_MEM_DISPLAY_SIZE);
+}
+
+void poly_add(int x, int y) {
+    if (polygon_point_count < MAX_POLYGON_POINTS) {
+        polygon_points[polygon_point_count].x = x;
+        polygon_points[polygon_point_count].y = y;
+        polygon_point_count++;
+    }
+}
+
+void poly_clear() {
+    polygon_point_count = 0;
+}
+
+void draw_polygon() {
+    if (polygon_point_count < 3) return;
+
+    int minY = polygon_points[0].y;
+    int maxY = polygon_points[0].y;
+    
+    for (int i = 1; i < polygon_point_count; i++) {
+        if (polygon_points[i].y < minY) minY = polygon_points[i].y;
+        if (polygon_points[i].y > maxY) maxY = polygon_points[i].y;
+    }
+
+    if (minY >= TB_SCREEN_HEIGHT || maxY < 0) return;
+
+    minY = minY < 0 ? 0 : minY;
+    maxY = maxY >= TB_SCREEN_HEIGHT ? TB_SCREEN_HEIGHT - 1 : maxY;
+
+    for (int y = minY; y <= maxY; y++) {
+        int intersections[MAX_POLYGON_POINTS];
+        int intersectionCount = 0;
+
+        for (int i = 0; i < polygon_point_count; i++) {
+            int j = (i + 1) % polygon_point_count;
+            int y1 = polygon_points[i].y;
+            int y2 = polygon_points[j].y;
+            
+            if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) {
+                int x1 = polygon_points[i].x;
+                int x2 = polygon_points[j].x;
+                int x = x1 + ((y - y1) * (x2 - x1)) / (y2 - y1);
+                intersections[intersectionCount++] = x;
+            }
+        }
+
+        for (int i = 0; i < intersectionCount - 1; i++) {
+            for (int j = i + 1; j < intersectionCount; j++) {
+                if (intersections[i] > intersections[j]) {
+                    int temp = intersections[i];
+                    intersections[i] = intersections[j];
+                    intersections[j] = temp;
+                }
+            }
+        }
+
+        for (int i = 0; i < intersectionCount; i += 2) {
+            if (i + 1 < intersectionCount) {
+                int x1 = intersections[i];
+                int x2 = intersections[i + 1];
+                
+                x1 = x1 < 0 ? 0 : x1;
+                x2 = x2 >= TB_SCREEN_WIDTH ? TB_SCREEN_WIDTH - 1 : x2;
+                
+                for (int x = x1; x <= x2; x++) {
+                    uint8_t* pixel = &tinybit_memory->display[(y * TB_SCREEN_WIDTH + x) * 2];
+                    blend(pixel, fillColor, pixel);
+                }
+            }
+        }
+    }
+
+    if (strokeWidth > 0) {
+        for (int i = 0; i < polygon_point_count; i++) {
+            int j = (i + 1) % polygon_point_count;
+            draw_line(polygon_points[i].x, polygon_points[i].y, 
+                     polygon_points[j].x, polygon_points[j].y);
+        }
+    }
 }
