@@ -17,6 +17,7 @@ int lua_random(lua_State* L);
 int lua_stroke(lua_State* L);
 int lua_fill(lua_State* L);
 int lua_rect(lua_State* L);
+int lua_line(lua_State* L);
 int lua_oval(lua_State* L);
 int lua_pset(lua_State* L);
 int lua_tone(lua_State* L);

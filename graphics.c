@@ -222,6 +222,52 @@ void draw_pixel(int x, int y) {
     blend(pixel, fillColor, pixel);
 }
 
+void draw_line(int x1, int y1, int x2, int y2) {
+    if (strokeWidth <= 0) return;
+    
+    int dx = abs(x2 - x1);
+    int dy = abs(y2 - y1);
+    int sx = x1 < x2 ? 1 : -1;
+    int sy = y1 < y2 ? 1 : -1;
+    int err = dx - dy;
+
+    int x = x1;
+    int y = y1;
+
+    while (1) {
+        if (strokeWidth == 1) {
+            if (x >= 0 && x < TB_SCREEN_WIDTH && y >= 0 && y < TB_SCREEN_HEIGHT) {
+                uint8_t* pixel = &tinybit_memory->display[(y * TB_SCREEN_WIDTH + x) * 2];
+                blend(pixel, strokeColor, pixel);
+            }
+        } else {
+            int radius = strokeWidth >> 1;
+            for (int dy = -radius; dy <= radius; dy++) {
+                for (int dx = -radius; dx <= radius; dx++) {
+                    int px = x + dx;
+                    int py = y + dy;
+                    if (px >= 0 && px < TB_SCREEN_WIDTH && py >= 0 && py < TB_SCREEN_HEIGHT) {
+                        uint8_t* pixel = &tinybit_memory->display[(py * TB_SCREEN_WIDTH + px) * 2];
+                        blend(pixel, strokeColor, pixel);
+                    }
+                }
+            }
+        }
+
+        if (x == x2 && y == y2) break;
+
+        int e2 = 2 * err;
+        if (e2 > -dy) {
+            err -= dy;
+            x += sx;
+        }
+        if (e2 < dx) {
+            err += dx;
+            y += sy;
+        }
+    }
+}
+
 void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees) {
     int cosA = fast_cos(angleDegrees);
     int sinA = fast_sin(angleDegrees);
@@ -229,10 +275,20 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
     int centerX = targetW >> 1;
     int centerY = targetH >> 1;
 
-    int clipStartX = targetX < 0 ? -targetX : 0;
-    int clipStartY = targetY < 0 ? -targetY : 0;
-    int clipEndX = (targetX + targetW > TB_SCREEN_WIDTH) ? TB_SCREEN_WIDTH - targetX : targetW;
-    int clipEndY = (targetY + targetH > TB_SCREEN_HEIGHT) ? TB_SCREEN_HEIGHT - targetY : targetH;
+    // Calculate expanded bounds for rotated sprite to prevent clipping
+    int absCosSin = (abs(cosA) + abs(sinA)) >> 16;
+    if (absCosSin == 0) absCosSin = 1;
+    
+    int expandedW = (targetW * absCosSin) + targetW;
+    int expandedH = (targetH * absCosSin) + targetH;
+    
+    int expandX = (expandedW - targetW) >> 1;
+    int expandY = (expandedH - targetH) >> 1;
+
+    int clipStartX = (targetX - expandX) < 0 ? -(targetX - expandX) : 0;
+    int clipStartY = (targetY - expandY) < 0 ? -(targetY - expandY) : 0;
+    int clipEndX = (targetX - expandX + expandedW > TB_SCREEN_WIDTH) ? TB_SCREEN_WIDTH - (targetX - expandX) : expandedW;
+    int clipEndY = (targetY - expandY + expandedH > TB_SCREEN_HEIGHT) ? TB_SCREEN_HEIGHT - (targetY - expandY) : expandedH;
 
     if (clipStartX >= clipEndX || clipStartY >= clipEndY) return;
 
@@ -241,11 +297,16 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
 
     for (int y = clipStartY; y < clipEndY; ++y) {
         for (int x = clipStartX; x < clipEndX; ++x) {
-            int relX = x - centerX;
-            int relY = y - centerY;
+            int screenX = targetX - expandX + x;
+            int screenY = targetY - expandY + y;
+            
+            if (screenX < 0 || screenX >= TB_SCREEN_WIDTH || screenY < 0 || screenY >= TB_SCREEN_HEIGHT) continue;
 
-            int rotX = ((relX * cosA - relY * sinA) >> 16) + centerX;
-            int rotY = ((relX * sinA + relY * cosA) >> 16) + centerY;
+            int relX = x - expandX - centerX;
+            int relY = y - expandY - centerY;
+
+            int rotX = ((relX * cosA + relY * sinA) >> 16) + centerX;
+            int rotY = ((-relX * sinA + relY * cosA) >> 16) + centerY;
 
             if (rotX >= 0 && rotX < targetW && rotY >= 0 && rotY < targetH) {
                 int sourcePixelX = sourceX + ((rotX * scale_x_fixed_point) >> 16);
@@ -255,7 +316,7 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
                     sourcePixelY >= sourceY && sourcePixelY < sourceY + sourceH) {
 
                     uint8_t* src = &tinybit_memory->spritesheet[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
-                    uint8_t* dst = &tinybit_memory->display[((targetY + y) * TB_SCREEN_WIDTH + targetX + x) * 2];
+                    uint8_t* dst = &tinybit_memory->display[(screenY * TB_SCREEN_WIDTH + screenX) * 2];
                     blend(dst, src, dst);
                 }
             }

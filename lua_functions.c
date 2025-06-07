@@ -117,6 +117,8 @@ void lua_setup(lua_State* L) {
 
     lua_pushcfunction(L, lua_sprite);
     lua_setglobal(L, "sprite");
+    lua_pushcfunction(L, lua_line);
+    lua_setglobal(L, "line");
     lua_pushcfunction(L, lua_millis);
     lua_setglobal(L, "millis");
     lua_pushcfunction(L, lua_stroke);
@@ -209,6 +211,20 @@ int lua_log(lua_State* L) {
     log_buffer[log_buffer_index] = '\0';
     log_func(log_buffer);
 
+    return 0;
+}
+
+int lua_line(lua_State* L) {
+    if (lua_gettop(L) != 4) {
+        return 0;
+    }
+
+    int sourceX1 = (int)luaL_checknumber(L, 1);
+    int sourceY1 = (int)luaL_checknumber(L, 2);
+    int sourceX2 = (int)luaL_checknumber(L, 3);
+    int sourceY2 = (int)luaL_checknumber(L, 4);
+
+    draw_line(sourceX1, sourceY1, sourceX2, sourceY2);
     return 0;
 }
 
