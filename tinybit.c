@@ -34,7 +34,7 @@ lua_State* L;
 pngle_t *pngle;
 
 int (*gamecount_func)();
-void (*gamecover_func)(int index);
+void (*gameload_func)(int index);
 
 void decode_pixel_load_game(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
 {
@@ -95,83 +95,102 @@ void tinybit_init(struct TinyBitMemory* memory, uint8_t* button_state_ptr) {
 }
 
 int lua_gamecount(lua_State* L) {
+
+    if (!gamecount_func) {
+        return lua_error(L);
+    }
+
     int count = gamecount_func();
     lua_pushinteger(L, count);
     return 1;
 }
 
 int lua_gamecover(lua_State* L) {
+
+    if (!gameload_func) {
+        return lua_error(L);
+    }
+
     if (lua_gettop(L) != 1) {
         lua_pushstring(L, "Expected 1 argument");
         return lua_error(L);
     }
 
     int index = luaL_checkinteger(L, 1);
-    size_t pointer = 0; // Assuming pointer is not used in this context
 
-    printf("Loading game cover for index: %d\n", index);
-    gamecover_func(index);
+    pngle_reset(pngle);
+    pngle_set_draw_callback(pngle, decode_pixel_load_cover);
+    gameload_func(index);
+
+    return 0;
+}
+
+int lua_gameload(lua_State* L) {
+
+    if (!gameload_func) {
+        return lua_error(L);
+    }
+
+    if (lua_gettop(L) != 1) {
+        lua_pushstring(L, "Expected 1 argument");
+        return lua_error(L);
+    }
+
+    pngle_reset(pngle);
+    pngle_set_draw_callback(pngle, decode_pixel_load_game);
+    memset(tinybit_memory, 0, sizeof(struct TinyBitMemory));
+
+    int index = luaL_checkinteger(L, 1);
+    gameload_func(index);
+
+    // restart game
+    lua_close(L);
+    L = luaL_newstate();
+    lua_setup(L);
+    tinybit_start();
 
     return 0;
 }
 
 void tinybit_start_ui(){
-    if(!tinybit_memory || !button_state || !gamecount_func || !gamecover_func) {
+    if(!tinybit_memory || !button_state) {
         return; // Error: null pointer
     }
-
-    pngle_set_draw_callback(pngle, decode_pixel_load_cover);
 
     // // add special functions to lua for reading game files
     lua_pushcfunction(L, lua_gamecount);
     lua_setglobal(L, "gamecount");
     lua_pushcfunction(L, lua_gamecover);
     lua_setglobal(L, "gamecover");
+    lua_pushcfunction(L, lua_gameload);
+    lua_setglobal(L, "gameload");
 
-    printf("Script\n");
     const char* s = 
         "log(\"[Lua] Hello from this string\")\n"
         "counter = 0\n"
         "log(\"game count: \" .. counter)\n"
         "gamecover(0)\n"
-        "frame_time = 0\n"
         "log(\"[Lua] Game cover loaded\")\n"
         "function _draw()\n"
         "    -- draw the spritesheet\n"
         "    sprite(0,0,128,128,0,0,128,128)\n"
-        "    if millis() - frame_time > 1000 then\n"
-        "        frame_time = millis()\n"
+        "    if btnp(UP) then\n"
         "        counter = (counter + 1) % gamecount()\n"
         "        gamecover(counter % gamecount())\n"
         "        log(\"[Lua] Game cover updated\")\n"
         "    end\n"
+        "    if btnp(DOWN) then\n"
+        "        gameload(counter)\n"
+        "    end\n"
         "end\n"
         "log(\"[Lua] _draw function defined\")\n";
 
-    // load lua file
-    if (luaL_dostring(L, s) == LUA_OK) {
-        lua_pop(L, lua_gettop(L));
-    } else {
-        printf("Error in lua code: %s\n", lua_tostring(L, -1));
-    }
-
-    // pngle_destroy(pngle);
-
-    printf("Exit start function...\n");
-
+    memcpy(tinybit_memory->script, s, strlen(s) + 1); // copy script to memory
+    tinybit_start();
 }
 
 bool tinybit_feed_cartridge(uint8_t* buffer, size_t size){
-    printf("[TinyBit] Feed cartridge with %zu bytes\n", size);
-    int ret = pngle_feed(pngle, buffer, size) != -2; // -2 means error
-    if (!ret) {
-        printf("[TinyBit] Error feeding cartridge data to pngle\n");
-        return false; // error in pngle feed
-    }
-    printf("[TinyBit] Successfully fed cartridge data to pngle\n");
-    pngle_reset(pngle);
-
-    return true;
+    return pngle_feed(pngle, buffer, size) != -2; // -2 means error
 }
 
 void tinybit_log_cb(void (*log_func_ptr)(const char*)){
@@ -183,8 +202,6 @@ void tinybit_log_cb(void (*log_func_ptr)(const char*)){
 }
 
 bool tinybit_start(){
-
-    pngle_destroy(pngle);
 
     // load lua file
     if (luaL_dostring(L, (char*)tinybit_memory->script) == LUA_OK) {
@@ -224,6 +241,8 @@ long tinybit_get_frame_time() {
 
 bool tinybit_frame() {
 
+    printf("[TinyBit] Frame start\n");
+
     frame_time = tinybit_get_frame_time();
 
     // perform lua draw function every frame
@@ -231,11 +250,15 @@ bool tinybit_frame() {
     if (lua_pcall(L, 0, 1, 0) == LUA_OK) {
         lua_pop(L, lua_gettop(L));
     } else {
+        lua_pop(L, lua_gettop(L)); // pop error message
+        printf("[TinyBit] Lua error: %s\n", lua_tostring(L, -1));
         return false; // runtime error in lua code
     }
 
     // save current button state
     save_button_state();
+
+    printf("[TinyBit] Frame end\n");
 
     return true;
 }
@@ -248,10 +271,10 @@ void tinybit_gamecount_cb(int (*gamecount_func_ptr)()) {
     gamecount_func = gamecount_func_ptr;
 }
 
-void tinybit_gamecover_cb(void (*gamecover_func_ptr)(int index)) {
-    if (!gamecover_func_ptr) {
+void tinybit_gameload_cb(void (*gameload_func_ptr)(int index)) {
+    if (!gameload_func_ptr) {
         return; // Error: null pointer
     }
     
-    gamecover_func = gamecover_func_ptr;
+    gameload_func = gameload_func_ptr;
 }
