@@ -42,7 +42,7 @@ tinybit_feed_catridge(png_data, data_length);
 ### Game Loop
 
 ```c
-tinybit_start();
+tinybit_start_game();
 while (1) {
     tinybit_frame();
     // Render tb_mem.display to your screen

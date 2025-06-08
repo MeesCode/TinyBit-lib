@@ -64,11 +64,12 @@ extern void (*gameload_func)(int index);
 
 void tinybit_init(struct TinyBitMemory* memory, uint8_t* button_state_ptr);
 bool tinybit_feed_cartridge(uint8_t* cartridge_buffer, size_t bytes);
-bool tinybit_frame();
-bool tinybit_start();
-void tinybit_log_cb(void (*log_func_ptr)(const char*));
-
+bool tinybit_start_game();
 void tinybit_start_ui();
+
+bool tinybit_frame();
+
+void tinybit_log_cb(void (*log_func_ptr)(const char*));
 void tinybit_gamecount_cb(int (*gamecount_func_ptr)());
 void tinybit_gameload_cb(void (*gameload_func_ptr)(int index));
 

@@ -150,7 +150,8 @@ int lua_gameload(lua_State* L) {
     lua_setglobal(L, "gamecover");
     lua_pushnil(L); 
     lua_setglobal(L, "gameload");
-    tinybit_start();
+
+    tinybit_start_game();
 
     return 0;
 }
@@ -176,7 +177,7 @@ void tinybit_start_ui(){
         "log(\"[Lua] Game cover loaded\")\n"
         "function _draw()\n"
         "    -- draw the spritesheet\n"
-        "    sprite(0,0,128,128,0,0,128,128)\n"
+        "    sprite(0,0,128,128,14,14,100,100)\n"
         "    if btnp(UP) then\n"
         "        counter = (counter + 1) % gamecount()\n"
         "        gamecover(counter % gamecount())\n"
@@ -189,7 +190,7 @@ void tinybit_start_ui(){
         "log(\"[Lua] _draw function defined\")\n";
 
     memcpy(tinybit_memory->script, s, strlen(s) + 1); // copy script to memory
-    tinybit_start();
+    tinybit_start_game();
 }
 
 bool tinybit_feed_cartridge(uint8_t* buffer, size_t size){
@@ -204,15 +205,12 @@ void tinybit_log_cb(void (*log_func_ptr)(const char*)){
     log_func = log_func_ptr;
 }
 
-bool tinybit_start(){
-
-    printf("%s", (char*)tinybit_memory->script);
+bool tinybit_start_game(){
 
     // load lua file
     if (luaL_dostring(L, (char*)tinybit_memory->script) == LUA_OK) {
         lua_pop(L, lua_gettop(L));
     } else{
-        printf("[TinyBit] Lua error");
         return false; // error in lua code
     }
 
