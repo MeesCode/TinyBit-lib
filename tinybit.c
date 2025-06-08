@@ -144,9 +144,12 @@ int lua_gameload(lua_State* L) {
     gameload_func(index);
 
     // restart game
-    lua_close(L);
-    L = luaL_newstate();
-    lua_setup(L);
+    lua_pushnil(L); 
+    lua_setglobal(L, "gamecount");
+    lua_pushnil(L); 
+    lua_setglobal(L, "gamecover");
+    lua_pushnil(L); 
+    lua_setglobal(L, "gameload");
     tinybit_start();
 
     return 0;
@@ -168,7 +171,7 @@ void tinybit_start_ui(){
     const char* s = 
         "log(\"[Lua] Hello from this string\")\n"
         "counter = 0\n"
-        "log(\"game count: \" .. counter)\n"
+        "log(\"files found: \" .. gamecount())\n"
         "gamecover(0)\n"
         "log(\"[Lua] Game cover loaded\")\n"
         "function _draw()\n"
@@ -203,10 +206,13 @@ void tinybit_log_cb(void (*log_func_ptr)(const char*)){
 
 bool tinybit_start(){
 
+    printf("%s", (char*)tinybit_memory->script);
+
     // load lua file
     if (luaL_dostring(L, (char*)tinybit_memory->script) == LUA_OK) {
         lua_pop(L, lua_gettop(L));
     } else{
+        printf("[TinyBit] Lua error");
         return false; // error in lua code
     }
 
@@ -241,8 +247,6 @@ long tinybit_get_frame_time() {
 
 bool tinybit_frame() {
 
-    printf("[TinyBit] Frame start\n");
-
     frame_time = tinybit_get_frame_time();
 
     // perform lua draw function every frame
@@ -257,8 +261,6 @@ bool tinybit_frame() {
 
     // save current button state
     save_button_state();
-
-    printf("[TinyBit] Frame end\n");
 
     return true;
 }
