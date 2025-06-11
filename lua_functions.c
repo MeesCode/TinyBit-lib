@@ -52,14 +52,14 @@ void lua_setup(lua_State* L) {
     // set lua tone variables
     lua_pushinteger(L, Ab);
     lua_setglobal(L, "Ab");
-    lua_pushinteger(L, A);
-    lua_setglobal(L, "A");
+    // lua_pushinteger(L, A);
+    // lua_setglobal(L, "A");
     lua_pushinteger(L, As);
     lua_setglobal(L, "As");
     lua_pushinteger(L, Bb);
     lua_setglobal(L, "Bb");
-    lua_pushinteger(L, B);
-    lua_setglobal(L, "B");
+    // lua_pushinteger(L, B);
+    // lua_setglobal(L, "B");
     lua_pushinteger(L, C);
     lua_setglobal(L, "C");
     lua_pushinteger(L, Cs);
@@ -99,9 +99,9 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "TB_SCREEN_HEIGHT");
 
     lua_pushinteger(L, TB_BUTTON_A);
-	lua_setglobal(L, "X");
+	lua_setglobal(L, "A");
 	lua_pushinteger(L, TB_BUTTON_B);
-	lua_setglobal(L, "Z");
+	lua_setglobal(L, "B");
 	lua_pushinteger(L, TB_BUTTON_UP);
 	lua_setglobal(L, "UP");
 	lua_pushinteger(L, TB_BUTTON_DOWN);
