@@ -66,8 +66,8 @@ void decode_pixel_load_cover(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w,
     }
 
     // write to spritesheet buffer
-    if(x >= 35 && x < 35 + TB_SCREEN_WIDTH && y >= 34 && y < 34 + TB_SCREEN_HEIGHT) {
-        size_t display_offset = ((y - 34) * TB_SCREEN_WIDTH + (x - 35)) * 2;
+    if(x >= TB_COVER_X && x < TB_COVER_X + TB_SCREEN_WIDTH && y >= TB_COVER_Y && y < TB_COVER_Y + TB_SCREEN_HEIGHT) {
+        size_t display_offset = ((y - TB_COVER_Y) * TB_SCREEN_WIDTH + (x - TB_COVER_X)) * 2;
         if (display_offset < TB_MEM_DISPLAY_SIZE) {
             tinybit_memory->spritesheet[display_offset] = (rgba[0] & 0xF0) | (rgba[1] & 0xF0) >> 4; // first byte
             tinybit_memory->spritesheet[display_offset + 1] = (rgba[2] & 0xF0) | (rgba[3] & 0xF0) >> 4; // second byte

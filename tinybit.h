@@ -39,6 +39,10 @@
 #define TB_MEM_USER_SIZE         0x01000 // 4Kb
 #define TB_MEM_SIZE              (TB_MEM_SPRITESHEET_SIZE + TB_MEM_DISPLAY_SIZE + TB_MEM_SCRIPT_SIZE + TB_MEM_USER_SIZE) // 80Kb
 
+// define cover location
+#define TB_COVER_X 35
+#define TB_COVER_Y 34
+
 PACKED_STRUCT(TinyBitMemory) {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
     uint8_t display[TB_MEM_DISPLAY_SIZE];
