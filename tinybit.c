@@ -197,6 +197,7 @@ bool tinybit_start(){
     // load lua file
     if (luaL_dostring(L, (char*)tinybit_memory->script) == LUA_OK) {
         lua_pop(L, lua_gettop(L));
+        return true; // success
     } 
     else {
         printf("[TinyBit] Lua error: %s\n", lua_tostring(L, -1));
