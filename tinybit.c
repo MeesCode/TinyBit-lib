@@ -29,12 +29,18 @@ struct TinyBitMemory* tinybit_memory;
 
 size_t cartridge_index = 0; // index for cartridge buffer
 int frame_timer = 0;
+bool running = true;
+
 lua_State* L;
 
 pngle_t *pngle;
 
 int (*gamecount_func)();
 void (*gameload_func)(int index);
+
+void (*tb_frame_func)();
+void (*tb_input_func)();
+void (*tb_sleep_func)();
 
 void decode_pixel_load_game(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
 {
@@ -60,7 +66,6 @@ void decode_pixel_load_game(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, 
 
 void decode_pixel_load_cover(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
 {
-    // printf("[TinyBit] decode_pixel_load_cover: x=%" PRIu32 ", y=%" PRIu32 ", w=%" PRIu32 ", h=%" PRIu32 "\n", x, y, w, h);
     if (!rgba || !tinybit_memory) {
         return; // Safety check for null pointers
     }
@@ -140,7 +145,7 @@ int lua_gameload(lua_State* L) {
     return 0;
 }
 
-
+// initialize tinybit system
 void tinybit_init(struct TinyBitMemory* memory, uint8_t* button_state_ptr) {
     if (!memory || !button_state_ptr) {
         return; // Error: null pointer
@@ -193,6 +198,7 @@ void tinybit_init(struct TinyBitMemory* memory, uint8_t* button_state_ptr) {
     memcpy(tinybit_memory->script, s, strlen(s) + 1); // copy script to memory
 }
 
+// start the game that is currently loaded in memory
 bool tinybit_start(){
     // load lua file
     if (luaL_dostring(L, (char*)tinybit_memory->script) == LUA_OK) {
@@ -206,18 +212,16 @@ bool tinybit_start(){
     }
 }
 
+void tinybit_quit() {
+    running = false;
+}
+
+// feed cartridge data to tinybit
 bool tinybit_feed_cartridge(uint8_t* buffer, size_t size){
     return pngle_feed(pngle, buffer, size) != -2; // -2 means error
 }
 
-void tinybit_log_cb(void (*log_func_ptr)(const char*)){
-    if (!log_func_ptr) {
-        return; // Error: null pointer
-    }
-    
-    log_func = log_func_ptr;
-}
-
+// get elapsed time in milliseconds since start
 long tinybit_get_frame_time() {
     #ifdef _POSIX_C_SOURCE
         struct timespec current_time;
@@ -244,24 +248,42 @@ long tinybit_get_frame_time() {
     #endif
 }
 
-bool tinybit_frame() {
+// main emulation loop
+void tinybit_loop() {
 
-    frame_time = tinybit_get_frame_time();
+    while(running){
+        frame_time = tinybit_get_frame_time();
 
-    // perform lua draw function every frame
-    lua_getglobal(L, "_draw");
-    if (lua_pcall(L, 0, 1, 0) == LUA_OK) {
-        lua_pop(L, lua_gettop(L));
-    } else {
-        lua_pop(L, lua_gettop(L)); // pop error message
-        printf("[TinyBit] Lua error: %s\n", lua_tostring(L, -1));
-        return false; // runtime error in lua code
+        // get button input
+        tb_input_func();
+
+        // perform lua draw function every frame
+        lua_getglobal(L, "_draw");
+        if (lua_pcall(L, 0, 1, 0) == LUA_OK) {
+            lua_pop(L, lua_gettop(L));
+        } else {
+            lua_pop(L, lua_gettop(L)); // pop error message
+            printf("[TinyBit] Lua error: %s\n", lua_tostring(L, -1));
+            break; // runtime error in lua code
+        }
+
+        // save current button state
+        save_button_state();
+
+        tb_frame_func();
+
+        // cap to ~60fps
+        int delay = (16 - (tinybit_get_frame_time() - frame_time));
+        if (delay > 0) {
+            tb_sleep_func(delay);
+        }
     }
 
-    // save current button state
-    save_button_state();
+    lua_close(L);
+    L = NULL;
 
-    return true;
+    pngle_destroy(pngle);
+    pngle = NULL;
 }
 
 void tinybit_gamecount_cb(int (*gamecount_func_ptr)()) {
@@ -278,4 +300,38 @@ void tinybit_gameload_cb(void (*gameload_func_ptr)(int index)) {
     }
     
     gameload_func = gameload_func_ptr;
+}
+
+// callback that get called when a new frame should be drawn
+void tinybit_frame_cb(void (*frame_func_ptr)()) {
+    if (!frame_func_ptr) {
+        return; // Error: null pointer
+    }
+    
+    tb_frame_func = frame_func_ptr;
+}
+
+// callback that get called to read button state
+void tinybit_input_cb(void (*input_func_ptr)()) {
+    if (!input_func_ptr) {
+        return; // Error: null pointer
+    }
+    
+    tb_input_func = input_func_ptr;
+}
+
+void tinybit_sleep_cb(void (*sleep_func_ptr)(int ms)) {
+    if (!sleep_func_ptr) {
+        return; // Error: null pointer
+    }
+    
+    tb_sleep_func = sleep_func_ptr;
+}
+
+void tinybit_log_cb(void (*log_func_ptr)(const char*)){
+    if (!log_func_ptr) {
+        return; // Error: null pointer
+    }
+    
+    log_func = log_func_ptr;
 }
