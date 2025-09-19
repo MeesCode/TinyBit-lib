@@ -6,10 +6,11 @@
 #include <stdint.h>
 #include "tinybit.h"
 
+// Input function declarations
 void save_button_state();
 bool input_btn(enum TinyBitButton btn);
 bool input_btnp(enum TinyBitButton btn);
 
-extern uint8_t* button_state;
+extern uint8_t button_state[TB_BUTTON_COUNT];
 
 #endif

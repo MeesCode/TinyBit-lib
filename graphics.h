@@ -1,5 +1,5 @@
-#ifndef graphics_H
-#define graphics_H
+#ifndef GRAPHICS_H
+#define GRAPHICS_H
 
 #include <stdint.h>
 
@@ -12,6 +12,7 @@ extern uint8_t strokeColor[2];
 
 extern int strokeWidth;
 
+// Graphics function declarations
 int random_range(int, int);
 void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH);
 void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees);

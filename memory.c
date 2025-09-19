@@ -4,10 +4,12 @@
 #include "memory.h"
 #include "tinybit.h"
 
+// Initialize TinyBit memory by clearing all sections
 void memory_init() {
     memset(tinybit_memory, 0, TB_MEM_SIZE);
 }
 
+// Copy memory from source to destination within TinyBit memory space
 void mem_copy(int dst, int src, int size) {
     if (dst + size > TB_MEM_SIZE || src + size > TB_MEM_SIZE) {
         return;
@@ -15,6 +17,7 @@ void mem_copy(int dst, int src, int size) {
     memcpy(&tinybit_memory[dst], &tinybit_memory[src], size);
 }
 
+// Read a byte from TinyBit memory at specified address
 uint8_t mem_peek(int dst) {
     if (dst < 0 || dst > TB_MEM_SIZE) {
         return 0;
@@ -22,6 +25,7 @@ uint8_t mem_peek(int dst) {
     return *(uint8_t*)&tinybit_memory[dst];
 }
 
+// Write a byte to TinyBit memory at specified address
 void mem_poke(int dst, int val){
     if (dst < 0 || dst > TB_MEM_SIZE) {
         return;

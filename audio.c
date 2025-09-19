@@ -26,10 +26,12 @@ const float frequencies[12][7] = {
     { 49.00f, 98.00f, 196.00f, 392.00f, 783.99f, 1567.98f, 3135.96f },
 };
 
+// Initialize the audio system (placeholder - not fully implemented)
 void audio_init(){
     // Audio system not implemented - SDL/Mix_* functions would go here
 }
 
+// Generate and queue a sine wave audio buffer for playback
 void queue_freq_sin(float freq, int ms, int vol, int chan) {
     if(vol < 0 || vol > 10 || chan < 0 || chan > 3) {
         return;
@@ -47,6 +49,7 @@ void queue_freq_sin(float freq, int ms, int vol, int chan) {
     free(buffer);
 }
 
+// Generate and queue a sawtooth wave audio buffer for playback
 void queue_freq_saw(float freq, int ms, int vol, int chan) {
     if(vol < 0 || vol > 10 || chan < 0 || chan > 3) {
         return;
@@ -65,6 +68,7 @@ void queue_freq_saw(float freq, int ms, int vol, int chan) {
     free(buffer);
 }
 
+// Generate and queue a square wave audio buffer for playback
 void queue_freq_square(float freq, int ms, int vol, int chan) {
     if(vol < 0 || vol > 10 || chan < 0 || chan > 3) {
         return;
@@ -83,6 +87,7 @@ void queue_freq_square(float freq, int ms, int vol, int chan) {
     free(buffer);
 }
 
+// Play white noise for specified duration (placeholder - not implemented)
 void play_noise(int eights, int vol, int chan) {
     //if(vol < 0 || vol > 10 || chan < 0 || chan > 3) {
     //    return;
@@ -99,6 +104,7 @@ void play_noise(int eights, int vol, int chan) {
     //free(buffer);
 }
 
+// Play a musical tone with specified parameters (placeholder - not implemented)
 void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan) {
     // Validate parameters
     // if (octave < 0 || octave > 6 || tone < 0 || tone > 11 || eights < 0 || 
@@ -122,18 +128,21 @@ void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan)
     // }
 }
 
+// Set the beats per minute for timing calculations
 void set_bpm(int new_bpm) {
     if (new_bpm > 0) {
         bpm = new_bpm;
     }
 }
 
+// Set the current audio channel
 void set_channel(int new_chan) {
     if(new_chan >= 0 && new_chan <= 3) {
         channel = new_chan;
     }
 }
 
+// Set the global audio volume
 void set_volume(int new_vol) {
     if(new_vol >= 0 && new_vol <= 10) {
         volume = new_vol;

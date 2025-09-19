@@ -7,6 +7,7 @@ extern uint8_t textColor[2];
 
 extern char characters[16 * 8];
 
+// Font function declarations
 void font_cursor(int, int);
 void font_print(const char*);
 void font_text_color(int r, int g, int b, int a);

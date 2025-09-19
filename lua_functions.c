@@ -17,6 +17,7 @@ char log_buffer[256];
 void (*log_func)(const char*);
 long frame_time = 0;
 
+// Initialize Lua state with TinyBit libraries and global variables
 void lua_setup(lua_State* L) {
     
     // load lua libraries
@@ -165,6 +166,7 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "draw_polygon");
 }
 
+// Lua function to log messages to the console
 int lua_log(lua_State* L) {
 
     if (log_func == NULL) {
@@ -220,6 +222,7 @@ int lua_log(lua_State* L) {
     return 0;
 }
 
+// Lua function to draw a line between two points
 int lua_line(lua_State* L) {
     if (lua_gettop(L) != 4) {
         return 0;
@@ -234,6 +237,7 @@ int lua_line(lua_State* L) {
     return 0;
 }
 
+// Lua function to draw a sprite (with optional rotation)
 int lua_sprite(lua_State* L) {
     if (lua_gettop(L) != 8 && lua_gettop(L) != 9) {
         return 0;
@@ -260,12 +264,14 @@ int lua_sprite(lua_State* L) {
     return 0;
 }
 
+// Lua function to get current frame time in milliseconds
 int lua_millis(lua_State* L) {
     lua_Integer m = frame_time;
     lua_pushinteger(L, m);
     return 1;
 }
 
+// Lua function to generate random number within range
 int lua_random(lua_State* L) {
     if (lua_gettop(L) != 2) {
         return 0;
@@ -279,6 +285,7 @@ int lua_random(lua_State* L) {
     return 1;
 }
 
+// Lua function to set stroke color and width
 int lua_stroke(lua_State* L) {
     if (lua_gettop(L) != 5) {
         return 0;
@@ -294,6 +301,7 @@ int lua_stroke(lua_State* L) {
     return 0;
 }
 
+// Lua function to set fill color
 int lua_fill(lua_State* L) {
     if (lua_gettop(L) != 4 && lua_gettop(L) != 8) {
         return 0;
@@ -309,6 +317,7 @@ int lua_fill(lua_State* L) {
     return 0;
 }
 
+// Lua function to set text color
 int lua_text(lua_State* L) {
     if (lua_gettop(L) != 4) {
         return 0;
@@ -323,6 +332,7 @@ int lua_text(lua_State* L) {
     return 0;
 }
 
+// Lua function to draw a rectangle
 int lua_rect(lua_State* L) {
     if (lua_gettop(L) != 4) {
         return 0;
@@ -337,6 +347,7 @@ int lua_rect(lua_State* L) {
     return 0;
 }
 
+// Lua function to draw an oval
 int lua_oval(lua_State* L) {
     if (lua_gettop(L) != 4) {
         return 0;
@@ -351,6 +362,7 @@ int lua_oval(lua_State* L) {
     return 0;
 }
 
+// Lua function to add a point to polygon vertex list
 int lua_poly_add(lua_State* L) {
     if (lua_gettop(L) != 2) {
         return 0;
@@ -363,16 +375,19 @@ int lua_poly_add(lua_State* L) {
     return 0;
 }
 
+// Lua function to clear polygon vertex list
 int lua_poly_clear(lua_State* L) {
     poly_clear();
     return 0;
 }
 
+// Lua function to draw the current polygon
 int poly(lua_State* L) {
     draw_polygon();
     return 0;
 }
 
+// Lua function to play a musical tone
 int lua_tone(lua_State* L) {
     if (lua_gettop(L) < 4 && lua_gettop(L) > 6) {
         return 0;
@@ -405,6 +420,7 @@ int lua_tone(lua_State* L) {
     return 0;
 }
 
+// Lua function to play white noise
 int lua_noise(lua_State* L) {
     if (lua_gettop(L) == 1) {
         int eights = luaL_checkinteger(L, 1);
@@ -430,6 +446,7 @@ int lua_noise(lua_State* L) {
     return 0;
 }
 
+// Lua function to set global audio volume
 int lua_volume(lua_State* L) {
     if (lua_gettop(L) != 1) {
         return 0;
@@ -440,6 +457,7 @@ int lua_volume(lua_State* L) {
     return 0;
 }
 
+// Lua function to set current audio channel
 int lua_channel(lua_State* L) {
     if (lua_gettop(L) != 1) {
         return 0;
@@ -450,29 +468,34 @@ int lua_channel(lua_State* L) {
     return 0;
 }
 
+// Lua function to set beats per minute for audio timing
 int lua_bpm(lua_State* L) {
     int new_bpm = luaL_checkinteger(L, 1);
     set_bpm(new_bpm);
     return 0;
 }
 
+// Lua function to check if button is currently pressed
 int lua_btn(lua_State* L) {
     enum TinyBitButton btn = luaL_checkinteger(L, 1);
     lua_pushboolean(L, input_btn(btn));
     return 1;
 }
 
+// Lua function to check if button was just pressed this frame
 int lua_btnp(lua_State* L) {
     enum TinyBitButton btn = luaL_checkinteger(L, 1);
     lua_pushboolean(L, input_btnp(btn));
     return 1;
 }
 
+// Lua function to clear the display
 int lua_cls(lua_State* L) {
     draw_cls();
     return 0;
 }
 
+// Lua function to copy memory between addresses
 int lua_mycopy(lua_State* L) {
     if (lua_gettop(L) != 3) {
         return 0;
@@ -486,6 +509,7 @@ int lua_mycopy(lua_State* L) {
     return 0;
 }
 
+// Lua function to read a byte from memory
 int lua_peek(lua_State* L) {
     if (lua_gettop(L) != 1) {
         return 0;
@@ -497,6 +521,7 @@ int lua_peek(lua_State* L) {
     return 1;
 }
 
+// Lua function to write a byte to memory
 int lua_poke(lua_State* L) {
     if (lua_gettop(L) != 2) {
         return 0;
@@ -509,6 +534,7 @@ int lua_poke(lua_State* L) {
     return 0;
 }
 
+// Lua function to set text cursor position
 int lua_cursor(lua_State* L) {
     if (lua_gettop(L) != 2) {
         return 0;
@@ -521,6 +547,7 @@ int lua_cursor(lua_State* L) {
     return 0;
 }
 
+// Lua function to print text at cursor position
 int lua_print(lua_State* L) {
 
     if (lua_gettop(L) != 1) {

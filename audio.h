@@ -28,6 +28,7 @@ extern int bpm;
 extern int channel;
 extern int volume;
 
+// Audio function declarations
 void lua_setup_audio();
 void audio_init();
 void set_bpm(int);

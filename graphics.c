@@ -33,6 +33,7 @@ static const int sin_table[] = {
     64729, 64898, 65047, 65176, 65286, 65376, 65446, 65496, 65526, 65536,
 };
 
+// Fast sine approximation using lookup table
 int fast_sin(int angle) {
     angle = angle % 360;
     if (angle < 0) angle += 360;
@@ -43,10 +44,12 @@ int fast_sin(int angle) {
     else return -sin_table[360 - angle];
 }
 
+// Fast cosine approximation using sine lookup table
 int fast_cos(int angle) {
     return fast_sin(angle + 90);
 }
 
+// Alpha blend foreground pixel with background pixel
 void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg) {
     // Extract from byte format: byte[0]=rrrrgggg, byte[1]=bbbbaaaa
     uint8_t fg_r = fg[0] & 0xF0;           // upper 4 bits of byte 0
@@ -80,10 +83,12 @@ void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg) {
     result_bytes[1] = (out_b & 0xF0) | ((out_a >> 4) & 0x0F);
 }
 
+// Generate random integer within specified range
 int random_range(int min, int max) {
     return min + rand() / (RAND_MAX / (max - min + 1) + 1);
 }
 
+// Draw a sprite from spritesheet to display with scaling and clipping
 void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH) {
     int clipStartX = targetX < 0 ? -targetX : 0;
     int clipStartY = targetY < 0 ? -targetY : 0;
@@ -111,6 +116,7 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
     }
 }
 
+// Draw a rectangle with optional stroke and fill
 void draw_rect(int x, int y, int w, int h) {
     int clipX = x < 0 ? 0 : x;
     int clipY = y < 0 ? 0 : y;
@@ -162,7 +168,7 @@ void draw_rect(int x, int y, int w, int h) {
     }
 }
 
-// draw an oval with outline, specified by x, y, w, h
+// Draw an oval with optional stroke and fill
 void draw_oval(int x, int y, int w, int h) {
     int rx = w >> 1;
     int ry = h >> 1;
@@ -211,17 +217,20 @@ void draw_oval(int x, int y, int w, int h) {
     }
 }
 
+// Set stroke color and width for drawing operations
 void set_stroke(int width, int r, int g, int b, int a) {
     strokeWidth = width >= 0 ? width : 0;
     strokeColor[0] = (r & 0xF0) | ((g >> 4) & 0x0F);
     strokeColor[1] = (b & 0xF0) | ((a >> 4) & 0x0F);
 }
 
+// Set fill color for drawing operations
 void set_fill(int r, int g, int b, int a) {
     fillColor[0] = (r & 0xF0) | ((g >> 4) & 0x0F);
     fillColor[1] = (b & 0xF0) | ((a >> 4) & 0x0F);
 }
 
+// Draw a single pixel at specified coordinates
 void draw_pixel(int x, int y) {
     if (x < 0 || x >= TB_SCREEN_WIDTH || y < 0 || y >= TB_SCREEN_HEIGHT) {
         return;
@@ -230,6 +239,7 @@ void draw_pixel(int x, int y) {
     blend(pixel, fillColor, pixel);
 }
 
+// Draw a line between two points using Bresenham's algorithm
 void draw_line(int x1, int y1, int x2, int y2) {
     if (strokeWidth <= 0) return;
     
@@ -276,6 +286,7 @@ void draw_line(int x1, int y1, int x2, int y2) {
     }
 }
 
+// Draw a rotated sprite from spritesheet to display with scaling and clipping
 void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees) {
     int cosA = fast_cos(angleDegrees);
     int sinA = fast_sin(angleDegrees);
@@ -332,10 +343,12 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
     }
 }
 
+// Clear the display buffer (set all pixels to black/transparent)
 void draw_cls() {
     memset(&tinybit_memory->display, 0, TB_MEM_DISPLAY_SIZE);
 }
 
+// Add a point to the polygon vertex list
 void poly_add(int x, int y) {
     if (polygon_point_count < MAX_POLYGON_POINTS) {
         polygon_points[polygon_point_count].x = x;
@@ -344,10 +357,12 @@ void poly_add(int x, int y) {
     }
 }
 
+// Clear the polygon vertex list
 void poly_clear() {
     polygon_point_count = 0;
 }
 
+// Draw a filled polygon using the current vertex list with optional stroke
 void draw_polygon() {
     if (polygon_point_count < 3) return;
 

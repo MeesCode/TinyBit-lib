@@ -24,16 +24,19 @@ char characters[16 * 8] = {
 	' ', ' ', ' ', ' ',  ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ', ' ', ' '
 };
 
+// Set the text color for font rendering
 void font_text_color(int r, int g, int b, int a) {
 	textColor[0] = (r & 0xF0) | ((g >> 4) & 0x0F);
 	textColor[1] = (b & 0xF0) | ((a >> 4) & 0x0F);
 }
 
+// Set the cursor position for text rendering
 void font_cursor(int x, int y) {
 	cursorX = x;
 	cursorY = y;
 }
 
+// Print text string at current cursor position using bitmap font
 void font_print(const char* str) {
 	const char* ptr = str;
 	int location = 0;
