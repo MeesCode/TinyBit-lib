@@ -4,6 +4,8 @@
 #include "memory.h"
 #include "tinybit.h"
 
+struct TinyBitMemory* tinybit_memory;
+
 // Initialize TinyBit memory by clearing all sections
 void memory_init() {
     memset(tinybit_memory, 0, TB_MEM_SIZE);

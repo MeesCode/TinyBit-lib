@@ -1,11 +1,17 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "input.h"
 #include "tinybit.h"
 
-uint8_t prev_button_state[TB_BUTTON_COUNT] = {0};
+static bool* button_state;
+bool prev_button_state[TB_BUTTON_COUNT] = {0};
+
+void init_input(bool* button_state_ptr) {
+	button_state = button_state_ptr;
+}
 
 // Check if a button is currently being pressed
 bool button_down(enum TinyBitButton b){

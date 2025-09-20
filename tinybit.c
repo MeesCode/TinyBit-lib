@@ -19,25 +19,21 @@
 
 #include "pngle/pngle.h"
 
-struct TinyBitMemory* tinybit_memory;
-uint8_t* button_state;
+static size_t cartridge_index = 0; // index for cartridge buffer
+static bool running = true;
 
-size_t cartridge_index = 0; // index for cartridge buffer
-int frame_timer = 0;
-bool running = true;
+static lua_State* L;
 
-lua_State* L;
+static pngle_t *pngle;
 
-pngle_t *pngle;
+static int (*gamecount_func)();
+static void (*gameload_func)(int index);
 
-int (*tb_gamecount_func)();
-void (*tb_gameload_func)(int index);
-
-void (*tb_frame_func)();
-void (*tb_input_func)();
-void (*tb_sleep_func)();
-int (*tb_get_ticks_ms_func)();
-int (*tb_get_ticks_ms_func)();
+static void (*frame_func)();
+static void (*input_func)();
+static void (*sleep_func)();
+static int (*get_ticks_ms_func)();
+static int (*get_ticks_ms_func)();
 
 // Decode PNG pixel data and load game assets (spritesheet and script) into memory
 void decode_pixel_load_game(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
@@ -82,11 +78,11 @@ void decode_pixel_load_cover(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w,
 // Lua function to get the count of available games
 int lua_gamecount(lua_State* L) {
 
-    if (!tb_gamecount_func) {
+    if (!gamecount_func) {
         return lua_error(L);
     }
 
-    int count = tb_gamecount_func();
+    int count = gamecount_func();
     lua_pushinteger(L, count);
     return 1;
 }
@@ -94,7 +90,7 @@ int lua_gamecount(lua_State* L) {
 // Lua function to load a game's cover image for preview
 int lua_gamecover(lua_State* L) {
 
-    if (!tb_gameload_func) {
+    if (!gameload_func) {
         return lua_error(L);
     }
 
@@ -107,7 +103,7 @@ int lua_gamecover(lua_State* L) {
 
     pngle_reset(pngle);
     pngle_set_draw_callback(pngle, decode_pixel_load_cover);
-    tb_gameload_func(index);
+    gameload_func(index);
 
     // the the game loader as default callback
     pngle_set_draw_callback(pngle, decode_pixel_load_game);
@@ -118,7 +114,7 @@ int lua_gamecover(lua_State* L) {
 // Lua function to load and start a game by index
 int lua_gameload(lua_State* L) {
 
-    if (!tb_gameload_func) {
+    if (!gameload_func) {
         return lua_error(L);
     }
 
@@ -132,7 +128,7 @@ int lua_gameload(lua_State* L) {
     memset(tinybit_memory, 0, sizeof(struct TinyBitMemory));
 
     int index = luaL_checkinteger(L, 1);
-    tb_gameload_func(index);
+    gameload_func(index);
 
     // restart game
     lua_pushnil(L); 
@@ -148,13 +144,13 @@ int lua_gameload(lua_State* L) {
 }
 
 // Initialize the TinyBit system with memory and input state pointers
-void tinybit_init(struct TinyBitMemory* memory, uint8_t* button_state_ptr) {
+void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
     if (!memory || !button_state_ptr) {
         return; // Error: null pointer
     }
 
     tinybit_memory = memory;
-    button_state = button_state_ptr;
+    init_input(button_state_ptr);
 
     pngle = pngle_new();
 
@@ -228,10 +224,10 @@ bool tinybit_feed_cartridge(uint8_t* buffer, size_t size){
 void tinybit_loop() {
 
     while(running){
-        frame_time = tb_get_ticks_ms_func();
+        frame_time = get_ticks_ms_func();
 
         // get button input
-        tb_input_func();
+        input_func();
 
         // perform lua draw function every frame
         lua_getglobal(L, "_draw");
@@ -246,12 +242,12 @@ void tinybit_loop() {
         // save current button state
         save_button_state();
 
-        tb_frame_func();
+        frame_func();
 
         // cap to ~60fps
-        int delay = (16 - (tb_get_ticks_ms_func() - frame_time));
+        int delay = (16 - (get_ticks_ms_func() - frame_time));
         if (delay > 0) {
-            tb_sleep_func(delay);
+            sleep_func(delay);
         }
     }
 
@@ -268,7 +264,7 @@ void tinybit_gamecount_cb(int (*gamecount_func_ptr)()) {
         return; // Error: null pointer
     }
     
-    tb_gamecount_func = gamecount_func_ptr;
+    gamecount_func = gamecount_func_ptr;
 }
 
 // Set callback function for loading games by index
@@ -277,7 +273,7 @@ void tinybit_gameload_cb(void (*gameload_func_ptr)(int index)) {
         return; // Error: null pointer
     }
     
-    tb_gameload_func = gameload_func_ptr;
+    gameload_func = gameload_func_ptr;
 }
 
 // Set callback function that gets called when a new frame should be drawn
@@ -286,7 +282,7 @@ void tinybit_render_cb(void (*render_func_ptr)()) {
         return; // Error: null pointer
     }
     
-    tb_frame_func = render_func_ptr;
+    frame_func = render_func_ptr;
 }
 
 // Set callback function that gets called to read button state
@@ -295,7 +291,7 @@ void tinybit_poll_input_cb(void (*poll_input_func_ptr)()) {
         return; // Error: null pointer
     }
     
-    tb_input_func = poll_input_func_ptr;
+    input_func = poll_input_func_ptr;
 }
 
 // Set callback function for sleeping/delaying execution
@@ -304,7 +300,7 @@ void tinybit_sleep_cb(void (*sleep_func_ptr)(int ms)) {
         return; // Error: null pointer
     }
     
-    tb_sleep_func = sleep_func_ptr;
+    sleep_func = sleep_func_ptr;
 }
 
 void tinybit_log_cb(void (*log_func_ptr)(const char*)){
@@ -320,5 +316,5 @@ void tinybit_get_ticks_ms_cb(int (*get_ticks_ms_func_ptr)()) {
         return; // Error: null pointer
     }
     
-    tb_get_ticks_ms_func = get_ticks_ms_func_ptr;
+    get_ticks_ms_func = get_ticks_ms_func_ptr;
 }

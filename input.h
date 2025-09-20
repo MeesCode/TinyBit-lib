@@ -7,10 +7,9 @@
 #include "tinybit.h"
 
 // Input function declarations
+void init_input(bool* button_state_ptr);
 void save_button_state();
 bool input_btn(enum TinyBitButton btn);
 bool input_btnp(enum TinyBitButton btn);
-
-extern uint8_t button_state[TB_BUTTON_COUNT];
 
 #endif
