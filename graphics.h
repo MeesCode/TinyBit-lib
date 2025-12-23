@@ -26,5 +26,6 @@ void draw_cls();
 void poly_add(int x, int y);
 void poly_clear();
 void draw_polygon();
+void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg);
 
 #endif

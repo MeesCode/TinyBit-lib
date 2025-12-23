@@ -154,7 +154,7 @@ void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
 
     pngle = pngle_new();
 
-    // t=set load game as the default callback
+    // set load game as the default callback
     pngle_set_draw_callback(pngle, decode_pixel_load_game);
 
     // initialize memory
@@ -204,7 +204,6 @@ bool tinybit_start(){
         return true; // success
     } 
     else {
-        printf("[TinyBit] Lua error: %s\n", lua_tostring(L, -1));
         lua_pop(L, lua_gettop(L)); // pop error message
         return false; // runtime error in lua code
     }
@@ -216,7 +215,7 @@ void tinybit_quit() {
 }
 
 // Feed cartridge PNG data to the TinyBit decoder
-bool tinybit_feed_cartridge(uint8_t* buffer, size_t size){
+bool tinybit_feed_cartridge(const uint8_t* buffer, size_t size){
     return pngle_feed(pngle, buffer, size) != -2; // -2 means error
 }
 
@@ -235,7 +234,7 @@ void tinybit_loop() {
             lua_pop(L, lua_gettop(L));
         } else {
             lua_pop(L, lua_gettop(L)); // pop error message
-            printf("[TinyBit] Lua error: %s\n", lua_tostring(L, -1));
+            printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
             break; // runtime error in lua code
         }
 

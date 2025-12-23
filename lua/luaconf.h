@@ -785,7 +785,27 @@
 ** without modifying the main part of the file.
 */
 
+/* Raspberry Pi Pico / embedded configuration */
+#if defined(PICO_BUILD) || defined(__arm__)
 
+/* Use 32-bit integers and floats for embedded systems */
+#undef LUA_32BITS
+#define LUA_32BITS 1
+
+/* Disable features that require OS support */
+#undef LUA_USE_POSIX
+#undef LUA_USE_DLOPEN
+#undef LUA_USE_WINDOWS
+
+/* Reduce stack size for memory-constrained systems */
+#undef LUAI_MAXSTACK
+#define LUAI_MAXSTACK 2000
+
+/* Reduce buffer size */
+#undef LUAL_BUFFERSIZE
+#define LUAL_BUFFERSIZE 256
+
+#endif
 
 
 
