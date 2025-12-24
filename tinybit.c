@@ -222,6 +222,9 @@ bool tinybit_feed_cartridge(const uint8_t* buffer, size_t size){
 // Main emulation loop - handles input, executes Lua draw function, and renders frames
 void tinybit_loop() {
 
+    uint32_t render_time;
+    uint32_t display_time;
+
     while(running){
         frame_time = get_ticks_ms_func();
 
@@ -241,7 +244,11 @@ void tinybit_loop() {
         // save current button state
         save_button_state();
 
+        render_time = get_ticks_ms_func() - frame_time;
         frame_func();
+        display_time = get_ticks_ms_func() - frame_time - render_time;
+
+        //printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time);
 
         // cap to ~60fps
         int delay = (16 - (get_ticks_ms_func() - frame_time));
