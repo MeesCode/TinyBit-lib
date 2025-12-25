@@ -23,7 +23,7 @@ static size_t cartridge_index = 0; // index for cartridge buffer
 static bool running = true;
 
 // Audio frame buffer pointer - allocated by host, filled by game each frame
-int8_t* tinybit_audio_buffer = NULL;
+int16_t* tinybit_audio_buffer = NULL;
 
 static lua_State* L;
 
@@ -261,7 +261,7 @@ void tinybit_loop() {
         process_audio();
         if (audio_queue_func) {
             audio_queue_func();
-            memset(tinybit_audio_buffer, 0, TB_AUDIO_FRAME_SAMPLES);
+            memset(tinybit_audio_buffer, 0, TB_AUDIO_FRAME_BUFFER_SIZE);
         }
         audio_time = get_ticks_ms_func() - start_time;
         start_time += audio_time;
@@ -274,7 +274,7 @@ void tinybit_loop() {
         // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
 
         // cap to ~60fps
-        int delay = (160 - (get_ticks_ms_func() - frame_time));
+        int delay = (16 - (get_ticks_ms_func() - frame_time));
         if (delay > 0) {
             sleep_func(delay);
         }

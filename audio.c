@@ -49,7 +49,7 @@ void tb_audio_init(){
     audio_needle.sample_processed_note = 0;
     audio_needle.tone_note = F;
     audio_needle.octave_note = 3;
-    audio_needle.duration_note = WHOLE;
+    audio_needle.duration_note = QUARTER;
     audio_needle.total_samples_note = ((60000 / bpm) / 8) * (16/audio_needle.duration_note) * (TB_AUDIO_SAMPLE_RATE / 1000);
 }
 
@@ -156,13 +156,14 @@ void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan)
     //     tinybit_audio_buffer[i] = (uint8_t)(x < 0.5f ? -1 : 1) * GAIN * vol; 
     // }
     audio_needle.sample_processed_note = 0;
+    audio_needle.phase = 0;
 }
 
 // Process audio for the current frame (placeholder - not implemented)
 void process_audio() {
     // for now just use the current note, string processing will come later
     float x = audio_needle.phase;
-    printf("new frame\n");
+    // printf("new frame\n");
 
 
     if(audio_needle.sample_processed_note >= audio_needle.total_samples_note) {
@@ -175,10 +176,9 @@ void process_audio() {
             if(audio_needle.sample_processed_note >= audio_needle.total_samples_note) {
                 tinybit_audio_buffer[i] = 0; // silence after note ends
             } else {
-                x += freq / TB_AUDIO_SAMPLE_RATE;
-                if (x >= 1.0f) x -= 1.0f;
-                printf("Generating sample %f %f %d\n", freq, x, (x < 0.5f ? -1 : 1) * 127);
-                tinybit_audio_buffer[i] = (int8_t)(x < 0.5f ? -1 : 1) * 127; 
+                x += 2 * M_PI * freq / TB_AUDIO_SAMPLE_RATE;
+                tinybit_audio_buffer[i] = (int16_t)(sin(x) * 32768);
+                //printf("Generating sample %f %f %d\n", freq, x, tinybit_audio_buffer[i]);
                 audio_needle.sample_processed_note++;
             }
         }
