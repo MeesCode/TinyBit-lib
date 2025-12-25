@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "audio.h"
+#include "tinybit.h"
 
 #define M_PI 3.14159265358979323846
 #define GAIN 500
@@ -25,11 +26,6 @@ const float frequencies[12][7] = {
     { 46.25f, 92.50f, 185.00f, 369.99f, 739.99f, 1479.98f, 2959.96f },
     { 49.00f, 98.00f, 196.00f, 392.00f, 783.99f, 1567.98f, 3135.96f },
 };
-
-// Initialize the audio system (placeholder - not fully implemented)
-void audio_init(){
-    // Audio system not implemented - SDL/Mix_* functions would go here
-}
 
 // Generate and queue a sine wave audio buffer for playback
 void queue_freq_sin(float freq, int ms, int vol, int chan) {
@@ -113,7 +109,7 @@ void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan)
     // }
 
     // int ms = ((60000 / bpm) / 8) * eights;
-    // float freq = frequencies[tone][octave];
+    float freq = frequencies[tone][octave];
 
     // switch (w) {
     // case SINE:
@@ -126,6 +122,13 @@ void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan)
     //     queue_freq_square(freq, ms, vol, chan);
     //     break;
     // }
+
+    float x = 0;
+    for (int i = 0; i < TB_AUDIO_FRAME_SAMPLES; i++) {
+        x += freq / TB_AUDIO_SAMPLE_RATE;
+        if (x >= 1.0f) x -= 1.0f;
+        tinybit_audio_buffer[i] = (uint16_t)(x < 0.5f ? -1 : 1) * GAIN * vol; 
+    }
 }
 
 // Set the beats per minute for timing calculations
