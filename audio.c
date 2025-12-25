@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "audio.h"
 #include "tinybit.h"
@@ -26,6 +27,31 @@ const float frequencies[12][7] = {
     { 46.25f, 92.50f, 185.00f, 369.99f, 739.99f, 1479.98f, 2959.96f },
     { 49.00f, 98.00f, 196.00f, 392.00f, 783.99f, 1567.98f, 3135.96f },
 };
+
+char audio_string_buffer[256];
+
+struct needle {
+    char* string_pos;
+    TONE tone_note;
+    uint8_t octave_note;
+    DURATION duration_note;
+    WAVEFORM waveform_note;
+    uint32_t sample_processed_note;
+    uint32_t total_samples_note;
+    float phase;
+};
+
+struct needle audio_needle;
+
+void tb_audio_init(){
+    strncpy(audio_string_buffer, "S:C4:4 Q:E4:8 N:0:8", sizeof(audio_string_buffer));
+    audio_needle.string_pos = audio_string_buffer;
+    audio_needle.sample_processed_note = 0;
+    audio_needle.tone_note = F;
+    audio_needle.octave_note = 3;
+    audio_needle.duration_note = WHOLE;
+    audio_needle.total_samples_note = ((60000 / bpm) / 8) * (16/audio_needle.duration_note) * (TB_AUDIO_SAMPLE_RATE / 1000);
+}
 
 // Generate and queue a sine wave audio buffer for playback
 void queue_freq_sin(float freq, int ms, int vol, int chan) {
@@ -123,11 +149,41 @@ void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan)
     //     break;
     // }
 
-    float x = 0;
-    for (int i = 0; i < TB_AUDIO_FRAME_SAMPLES; i++) {
-        x += freq / TB_AUDIO_SAMPLE_RATE;
-        if (x >= 1.0f) x -= 1.0f;
-        tinybit_audio_buffer[i] = (uint16_t)(x < 0.5f ? -1 : 1) * GAIN * vol; 
+    // float x = 0;
+    // for (int i = 0; i < TB_AUDIO_FRAME_SAMPLES; i++) {
+    //     x += freq / TB_AUDIO_SAMPLE_RATE;
+    //     if (x >= 1.0f) x -= 1.0f;
+    //     tinybit_audio_buffer[i] = (uint8_t)(x < 0.5f ? -1 : 1) * GAIN * vol; 
+    // }
+    audio_needle.sample_processed_note = 0;
+}
+
+// Process audio for the current frame (placeholder - not implemented)
+void process_audio() {
+    // for now just use the current note, string processing will come later
+    float x = audio_needle.phase;
+    printf("new frame\n");
+
+
+    if(audio_needle.sample_processed_note >= audio_needle.total_samples_note) {
+        // printf("Note finished\n");
+        return; // note finished
+    } else {
+        // generate square wave for current note
+        float freq = frequencies[audio_needle.tone_note][audio_needle.octave_note];
+        for (int i = 0; i < TB_AUDIO_FRAME_SAMPLES; i++) {
+            if(audio_needle.sample_processed_note >= audio_needle.total_samples_note) {
+                tinybit_audio_buffer[i] = 0; // silence after note ends
+            } else {
+                x += freq / TB_AUDIO_SAMPLE_RATE;
+                if (x >= 1.0f) x -= 1.0f;
+                printf("Generating sample %f %f %d\n", freq, x, (x < 0.5f ? -1 : 1) * 127);
+                tinybit_audio_buffer[i] = (int8_t)(x < 0.5f ? -1 : 1) * 127; 
+                audio_needle.sample_processed_note++;
+            }
+        }
+        audio_needle.phase = x;
+        // printf("Sample processed: %u / %u\n", audio_needle.sample_processed_note, audio_needle.total_samples_note);
     }
 }
 

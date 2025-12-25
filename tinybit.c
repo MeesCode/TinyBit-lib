@@ -23,7 +23,7 @@ static size_t cartridge_index = 0; // index for cartridge buffer
 static bool running = true;
 
 // Audio frame buffer pointer - allocated by host, filled by game each frame
-int16_t* tinybit_audio_buffer = NULL;
+int8_t* tinybit_audio_buffer = NULL;
 
 static lua_State* L;
 
@@ -163,6 +163,7 @@ void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr, int16_t*
 
     // initialize memory
     memory_init();
+    tb_audio_init();
     
     // set up lua VM
     L = luaL_newstate();
@@ -226,14 +227,20 @@ bool tinybit_feed_cartridge(const uint8_t* buffer, size_t size){
 // Main emulation loop - handles input, executes Lua draw function, and renders frames
 void tinybit_loop() {
 
+    uint32_t start_time;
     uint32_t render_time;
+    uint32_t input_time;
     uint32_t display_time;
+    uint32_t audio_time;
 
     while(running){
         frame_time = get_ticks_ms_func();
+        start_time = frame_time;
 
         // get button input
         input_func();
+        input_time = get_ticks_ms_func() - start_time;
+        start_time += input_time;
 
         // perform lua draw function every frame
         lua_getglobal(L, "_draw");
@@ -244,25 +251,30 @@ void tinybit_loop() {
             printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
             break; // runtime error in lua code
         }
+        render_time = get_ticks_ms_func() - start_time;
+        start_time += render_time;
 
         // save current button state
         save_button_state();
 
-        // queue audio for this frame
+        // process audio for this frame
+        process_audio();
         if (audio_queue_func) {
             audio_queue_func();
-            // clear audio buffer for next frame
-            memset(tinybit_audio_buffer, 0, TB_AUDIO_FRAME_SIZE);
+            memset(tinybit_audio_buffer, 0, TB_AUDIO_FRAME_SAMPLES);
         }
+        audio_time = get_ticks_ms_func() - start_time;
+        start_time += audio_time;
 
-        render_time = get_ticks_ms_func() - frame_time;
+        // call render callback to display the frame
         frame_func();
-        display_time = get_ticks_ms_func() - frame_time - render_time;
+        display_time = get_ticks_ms_func() - start_time;
+        start_time += display_time;
 
-        //printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time);
+        // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
 
         // cap to ~60fps
-        int delay = (16 - (get_ticks_ms_func() - frame_time));
+        int delay = (160 - (get_ticks_ms_func() - frame_time));
         if (delay > 0) {
             sleep_func(delay);
         }

@@ -45,14 +45,10 @@
 
 // Audio configuration
 #define TB_AUDIO_SAMPLE_RATE 22000
-#define TB_AUDIO_CHANNELS 1
-#define TB_AUDIO_FPS 60
-// samples per frame = 22000 / 60 = 366 samples, * 2 bytes = 732 bytes
-#define TB_AUDIO_FRAME_SAMPLES (TB_AUDIO_SAMPLE_RATE / TB_AUDIO_FPS)
-#define TB_AUDIO_FRAME_SIZE (TB_AUDIO_FRAME_SAMPLES * TB_AUDIO_CHANNELS * sizeof(int16_t))
+#define TB_AUDIO_FRAME_SAMPLES (TB_AUDIO_SAMPLE_RATE / 6) // samples per ~60fps frame
 
 // Audio frame buffer pointer - filled by game each frame, played by host
-extern int16_t* tinybit_audio_buffer;
+extern int8_t* tinybit_audio_buffer;
 
 PACKED_STRUCT(TinyBitMemory) {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 

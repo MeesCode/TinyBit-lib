@@ -22,6 +22,14 @@ typedef enum {
 	SQUARE
 } WAVEFORM;
 
+typedef enum {
+	SIXTEENTH = 16,
+	EIGHTH = 8,
+	QUARTER = 4,
+	HALF = 2,
+	WHOLE = 1
+} DURATION;
+
 // extern SDL_AudioDeviceID audio_device;
 // extern SDL_AudioSpec audio_spec;
 extern int bpm;
@@ -35,5 +43,7 @@ void set_channel(int);
 void set_volume(int);
 void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int, int);
 void play_noise(int eights, int, int);
+void process_audio();
+void tb_audio_init();
 
 #endif
