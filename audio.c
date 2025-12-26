@@ -39,18 +39,36 @@ struct needle {
     uint32_t sample_processed_note;
     uint32_t total_samples_note;
     float phase;
+    bool repeat;
+    bool stop;
 };
 
 struct needle audio_needle;
 
+char *strnstr(const char *s, const char *find, size_t slen)
+{
+	char c, sc;
+	size_t len;
+
+	if ((c = *find++) != '\0') {
+		len = strlen(find);
+		do {
+			do {
+				if (slen-- < 1 || (sc = *s++) == '\0')
+					return (NULL);
+			} while (sc != c);
+			if (len > slen)
+				return (NULL);
+		} while (strncmp(s, find, len) != 0);
+		s--;
+	}
+	return ((char *)s);
+}
+
 void tb_audio_init(){
-    strncpy(audio_string_buffer, "S:C4:4 Q:E4:8 N:0:8", sizeof(audio_string_buffer));
-    audio_needle.string_pos = audio_string_buffer;
-    audio_needle.sample_processed_note = 0;
-    audio_needle.tone_note = F;
-    audio_needle.octave_note = 3;
-    audio_needle.duration_note = QUARTER;
-    audio_needle.total_samples_note = ((60000 / bpm) / 8) * (16/audio_needle.duration_note) * (TB_AUDIO_SAMPLE_RATE / 1000);
+    strncpy(audio_string_buffer, "S:C4:2 S:E4:2 S:F4:2", sizeof(audio_string_buffer));
+    memset(&audio_needle, 0, sizeof(struct needle));
+    audio_needle.repeat = true;
 }
 
 // Generate and queue a sine wave audio buffer for playback
@@ -135,7 +153,7 @@ void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan)
     // }
 
     // int ms = ((60000 / bpm) / 8) * eights;
-    float freq = frequencies[tone][octave];
+    // float freq = frequencies[tone][octave];
 
     // switch (w) {
     // case SINE:
@@ -155,35 +173,140 @@ void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int vol, int chan)
     //     if (x >= 1.0f) x -= 1.0f;
     //     tinybit_audio_buffer[i] = (uint8_t)(x < 0.5f ? -1 : 1) * GAIN * vol; 
     // }
+    // audio_needle.sample_processed_note = 0;
+    // audio_needle.phase = 0;
+}
+
+void get_next_note_from_string() {
+
+    if(audio_needle.stop) {
+        printf("Audio needle stopped.\n");
+        return;
+    }
+
+    // printf("Getting next note from string at pos: %ld\n", audio_needle.string_pos - audio_string_buffer);
+
+    char* pos = audio_needle.string_pos;
+
+    // needle not yet started
+    if (!pos) {
+        // printf("starting audio string.\n");
+        pos = audio_string_buffer;
+        audio_needle.string_pos = audio_string_buffer;
+        audio_needle.stop = false;
+    } else {
+        pos = strnstr(pos, " ", 7); // skip to next note
+
+        // check for end of string
+        if (!pos || *pos == '\0') {
+            // loop or stop
+            if(audio_needle.repeat) {
+                // printf("Looping audio string.\n");
+                pos = audio_string_buffer;
+                audio_needle.string_pos = audio_string_buffer;
+            } else {
+                // printf("Stopping audio needle.\n");
+                audio_needle.stop = true;
+                return;
+            }
+        }else {
+            pos += 1; // move to character after space
+        }
+
+    }
+
+
+    // parse waveform
+    switch(*pos) {
+        case 'S': audio_needle.waveform_note = SINE; break;
+        case 'Q': audio_needle.waveform_note = SQUARE; break;
+        case 'W': audio_needle.waveform_note = SAW; break;
+        case 'N': audio_needle.waveform_note = NOISE; break;
+        default: 
+            printf("Invalid waveform character: %c\n", *pos);
+            audio_needle.stop = true; return; // invalid waveform
+    }
+
+    // parse tone
+    pos = strnstr(pos, ":", 4) + 1; // move to character after ':'
+    switch(*pos) {
+        case 'C': audio_needle.tone_note = C; break;
+        case 'D': audio_needle.tone_note = D; break;
+        case 'E': audio_needle.tone_note = E; break;
+        case 'F': audio_needle.tone_note = F; break;
+        case 'G': audio_needle.tone_note = G; break;
+        case 'A': audio_needle.tone_note = A; break;
+        case 'B': audio_needle.tone_note = B; break;
+        default: 
+            printf("Invalid tone character: %c\n", *pos);
+            audio_needle.stop = true; return; // invalid tone
+    }
+
+    // check for sharp/flat
+    pos += 1; 
+    if (*pos == 's') {
+        audio_needle.tone_note = (audio_needle.tone_note + 1) % 12;
+        pos += 1; // move position forward
+    } if( *pos == 'b') {
+        audio_needle.tone_note = (audio_needle.tone_note - 1) % 12;
+        pos += 1; // move position forward
+    }
+
+    // parse octave
+    audio_needle.octave_note = *pos - '0';
+
+    // parse duration
+    pos = strnstr(pos, ":", 4) + 1; // move to character after ':'
+    switch(*pos) {
+        case '1': 
+            if(* (pos + 1) == '6') {
+                audio_needle.duration_note = SIXTEENTH; 
+            } else {
+                audio_needle.duration_note = WHOLE; 
+            }
+        break;
+        case '2': audio_needle.duration_note = HALF; break;
+        case '4': audio_needle.duration_note = QUARTER; break;
+        case '8': audio_needle.duration_note = EIGHTH; break;
+        default: 
+            printf("Invalid duration character: %c\n", *pos);
+            audio_needle.stop = true; return; // invalid duration
+    }
+
+    // calculate total samples for the note
+    audio_needle.total_samples_note = ((60000 / bpm) / 16) * (16/audio_needle.duration_note) * (TB_AUDIO_SAMPLE_RATE / 1000);
     audio_needle.sample_processed_note = 0;
-    audio_needle.phase = 0;
+    audio_needle.string_pos = pos;
+    // audio_needle.phase = 0;
+
+    // printf("Next note: Waveform %d, Tone %d, Octave %d, Duration %d, Total Samples %d\n", 
+    //     audio_needle.waveform_note,
+    //     audio_needle.tone_note,
+    //     audio_needle.octave_note,
+    //     audio_needle.duration_note,
+    //     audio_needle.total_samples_note
+    // );
 }
 
 // Process audio for the current frame (placeholder - not implemented)
 void process_audio() {
-    // for now just use the current note, string processing will come later
     float x = audio_needle.phase;
-    // printf("new frame\n");
-
 
     if(audio_needle.sample_processed_note >= audio_needle.total_samples_note) {
-        // printf("Note finished\n");
-        return; // note finished
+        get_next_note_from_string();
     } else {
-        // generate square wave for current note
         float freq = frequencies[audio_needle.tone_note][audio_needle.octave_note];
         for (int i = 0; i < TB_AUDIO_FRAME_SAMPLES; i++) {
             if(audio_needle.sample_processed_note >= audio_needle.total_samples_note) {
                 tinybit_audio_buffer[i] = 0; // silence after note ends
             } else {
                 x += 2 * M_PI * freq / TB_AUDIO_SAMPLE_RATE;
-                tinybit_audio_buffer[i] = (int16_t)(sin(x) * 32768);
+                tinybit_audio_buffer[i] = (int16_t)(sin(x) * 4000); // 4000 is the gain for now
                 //printf("Generating sample %f %f %d\n", freq, x, tinybit_audio_buffer[i]);
                 audio_needle.sample_processed_note++;
             }
         }
         audio_needle.phase = x;
-        // printf("Sample processed: %u / %u\n", audio_needle.sample_processed_note, audio_needle.total_samples_note);
     }
 }
 
