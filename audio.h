@@ -40,10 +40,6 @@ extern int volume;
 // Audio function declarations
 void lua_setup_audio();
 void set_bpm(int);
-void set_channel(int);
-void set_volume(int);
-void play_tone(TONE tone, int octave, int eights, WAVEFORM w, int, int);
-void play_noise(int eights, int, int);
 void process_audio();
 void tb_audio_init();
 

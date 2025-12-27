@@ -130,10 +130,6 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "rect");
     lua_pushcfunction(L, lua_oval);
     lua_setglobal(L, "oval");
-    lua_pushcfunction(L, lua_tone);
-    lua_setglobal(L, "tone");
-    lua_pushcfunction(L, lua_noise);
-    lua_setglobal(L, "noise");
     lua_pushcfunction(L, lua_bpm);
     lua_setglobal(L, "bpm");
     lua_pushcfunction(L, lua_btn);
@@ -384,87 +380,6 @@ int lua_poly_clear(lua_State* L) {
 // Lua function to draw the current polygon
 int poly(lua_State* L) {
     draw_polygon();
-    return 0;
-}
-
-// Lua function to play a musical tone
-int lua_tone(lua_State* L) {
-    if (lua_gettop(L) < 4 && lua_gettop(L) > 6) {
-        return 0;
-    }
-
-    TONE tone = luaL_checkinteger(L, 1);
-    int octave = luaL_checkinteger(L, 2);
-    int eights = luaL_checkinteger(L, 3);
-    WAVEFORM wf = luaL_checkinteger(L, 4);
-
-    if(lua_gettop(L) == 4) {
-        play_tone(tone, octave, eights, wf, volume, channel);
-        return 0;
-    }
-
-    int vol = luaL_checkinteger(L, 5);
-
-    if(lua_gettop(L) == 5) {
-        play_tone(tone, octave, eights, wf, vol, channel);
-        return 0;
-    }
-
-    int chan = luaL_checkinteger(L, 6);
-
-    if(lua_gettop(L) == 6) {
-        play_tone(tone, octave, eights, wf, vol, chan);
-    }
-
-    
-    return 0;
-}
-
-// Lua function to play white noise
-int lua_noise(lua_State* L) {
-    if (lua_gettop(L) == 1) {
-        int eights = luaL_checkinteger(L, 1);
-        play_noise(eights, volume, channel);
-        return 0;
-    }
-
-    if (lua_gettop(L) == 2) {
-        int eights = luaL_checkinteger(L, 1);
-        int vol = luaL_checkinteger(L, 2);
-        play_noise(eights, vol, channel);
-        return 0;
-    }
-
-    if (lua_gettop(L) == 3) {
-        int eights = luaL_checkinteger(L, 1);
-        int vol = luaL_checkinteger(L, 2);
-        int chan = luaL_checkinteger(L, 3);
-        play_noise(eights, vol, chan);
-        return 0;
-    }
-
-    return 0;
-}
-
-// Lua function to set global audio volume
-int lua_volume(lua_State* L) {
-    if (lua_gettop(L) != 1) {
-        return 0;
-    }
-
-    int new_volume = luaL_checkinteger(L, 1);
-    set_volume(new_volume);
-    return 0;
-}
-
-// Lua function to set current audio channel
-int lua_channel(lua_State* L) {
-    if (lua_gettop(L) != 1) {
-        return 0;
-    }
-
-    int new_channel = luaL_checkinteger(L, 1);
-    set_channel(new_channel);
     return 0;
 }
 
