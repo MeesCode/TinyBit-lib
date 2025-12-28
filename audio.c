@@ -39,6 +39,7 @@ struct needle {
     WAVEFORM waveform_note;
     uint32_t sample_processed_note;
     uint32_t total_samples_note;
+    float frequency_note;
     float phase;
     bool repeat;
     bool stop;
@@ -67,8 +68,7 @@ char *strnstr(const char *s, const char *find, size_t slen)
 }
 
 void tb_audio_init(){
-    strncpy(audio_string_buffer, "S:C4:2 S:E4:2 S:G4:2 S:B5:2 Q:C5:2 Q:B5:2 Q:G4:2 Q:E4:2", sizeof(audio_string_buffer));
-    //strncpy(audio_string_buffer, "S:C4:16 S:E4:16", sizeof(audio_string_buffer));
+    strncpy(audio_string_buffer, "S:C4:2 S:E4:2 S:G4:2 S:B5:2 W:C5:2 W:B5:2 W:G4:2 W:E4:2", sizeof(audio_string_buffer));
     memset(&audio_needle, 0, sizeof(struct needle));
     audio_needle.repeat = true;
 }
@@ -79,8 +79,6 @@ void get_next_note_from_string() {
         printf("Audio needle stopped.\n");
         return;
     }
-
-    // printf("Getting next note from string at pos: %ld\n", audio_needle.string_pos - audio_string_buffer);
 
     char* pos = audio_needle.string_pos;
 
@@ -108,9 +106,7 @@ void get_next_note_from_string() {
         }else {
             pos += 1; // move to character after space
         }
-
     }
-
 
     // parse waveform
     switch(*pos) {
@@ -174,6 +170,7 @@ void get_next_note_from_string() {
     }
 
     // calculate total samples for the note
+    audio_needle.frequency_note = frequencies[audio_needle.tone_note][audio_needle.octave_note];
     audio_needle.total_samples_note = ((60000 / bpm) / 16) * (16/audio_needle.duration_note) * (TB_AUDIO_SAMPLE_RATE / 1000);
     audio_needle.sample_processed_note = 0;
     audio_needle.string_pos = pos;
@@ -189,66 +186,61 @@ void get_next_note_from_string() {
 }
 
 // return sample, update phase
-float sine_wave(float *phase, float frequency) {
-    *phase += frequency / TB_AUDIO_SAMPLE_RATE;
-    return (sin(2 * M_PI * *phase));
+float sine_wave(float phase) {
+    return (sin(2 * M_PI * phase));
 }
 
 // return sample, update phase
-float square_wave(float* phase, float frequency) {
-    *phase += frequency / TB_AUDIO_SAMPLE_RATE;
-    if (*phase >= 1.0f) *phase -= 1.0f;
-    return (*phase < 0.5f ? -1 : 1);
+float square_wave(float phase) {
+    return (phase < 0.5f ? -1 : 1);
 }
 
 // return sample, update phase
-float saw_wave(float* phase, float frequency) {
-    *phase += frequency / TB_AUDIO_SAMPLE_RATE;
-    if (*phase >= 1.0f) *phase -= 1.0f;
-    return (*phase * 2 - 1);
+float saw_wave(float phase) {
+    return (phase * 2 - 1);
 }
 
 // Process audio for the current frame (placeholder - not implemented)
 void process_audio() {
-    float x = audio_needle.phase;
+    float phase = audio_needle.phase;
     //printf("new frame audio processing at phase %f\n", x);
 
-    if(audio_needle.sample_processed_note >= audio_needle.total_samples_note) {
-        get_next_note_from_string();
-        printf("new note\n");
-    }
-
-    float freq = frequencies[audio_needle.tone_note][audio_needle.octave_note];
     for (int i = 0; i < TB_AUDIO_FRAME_SAMPLES; i++) {
+
+        // grab next note
         if(audio_needle.sample_processed_note >= audio_needle.total_samples_note) {
-            tinybit_audio_buffer[i] = 0; // silence after note ends
-        } else {
-            int gain = GAIN;
-            if(audio_needle.total_samples_note - audio_needle.sample_processed_note < ENVELOPE_SAMPLES) {
-                // decay
-                gain = (gain * (audio_needle.total_samples_note - audio_needle.sample_processed_note)) / ENVELOPE_SAMPLES;
-            } else if(audio_needle.sample_processed_note < ENVELOPE_SAMPLES) {
-                // attack
-                gain = (gain * audio_needle.sample_processed_note) / ENVELOPE_SAMPLES;
-            }
-
-            switch (audio_needle.waveform_note) {
-            case SQUARE:
-                tinybit_audio_buffer[i] = (int16_t)(square_wave(&x, freq) * gain);
-                break;
-            case SAW:
-                tinybit_audio_buffer[i] = (int16_t)(saw_wave(&x, freq) * gain);
-                break;
-            case SINE:
-                tinybit_audio_buffer[i] = (int16_t)(sine_wave(&x, freq) * gain);
-                break;
-            }
-
-            //printf("Generating sample %f %f %d\n", freq, x, tinybit_audio_buffer[i]);
-            audio_needle.sample_processed_note++;
+            get_next_note_from_string();
         }
+
+        int gain = GAIN;
+        // decay
+        if(audio_needle.total_samples_note - audio_needle.sample_processed_note < ENVELOPE_SAMPLES) {
+            gain = (gain * (audio_needle.total_samples_note - audio_needle.sample_processed_note)) / ENVELOPE_SAMPLES;
+        } 
+        // attack
+        else if(audio_needle.sample_processed_note < ENVELOPE_SAMPLES) {
+            gain = (gain * audio_needle.sample_processed_note) / ENVELOPE_SAMPLES;
+        }
+
+        // update phase
+        phase += audio_needle.frequency_note / TB_AUDIO_SAMPLE_RATE;
+        if (phase >= 1.0f) phase = 0.0f;
+
+        switch (audio_needle.waveform_note) {
+        case SQUARE:
+            tinybit_audio_buffer[i] = (int16_t)(square_wave(phase) * gain);
+            break;
+        case SAW:
+            tinybit_audio_buffer[i] = (int16_t)(saw_wave(phase) * gain);
+            break;
+        case SINE:
+            tinybit_audio_buffer[i] = (int16_t)(sine_wave(phase) * gain);
+            break;
+        }
+
+        audio_needle.sample_processed_note++;
     }
-    audio_needle.phase = x;
+    audio_needle.phase = phase;
 }
 
 // Set the beats per minute for timing calculations
