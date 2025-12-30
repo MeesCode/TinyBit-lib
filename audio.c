@@ -54,14 +54,14 @@ static WAVEFORM voice_id_to_waveform(const char *voice_id) {
 // Get frequency from note's chord array
 static float get_frequency_from_chord(struct note *n, uint8_t chord_idx) {
     if (!n || chord_idx >= n->chord_size) return 0.0f;
-    if (n->note_name[chord_idx] == NOTE_REST) return 0.0f;
-    return n->frequency_x10[chord_idx] / 10.0f;
+    if (midi_is_rest(n->midi_note[chord_idx]) == NOTE_REST) return 0.0f;
+    return midi_to_frequency_x10(n->midi_note[chord_idx]) / 10.0f;
 }
 
 // Check if note is a rest
 static bool is_rest_note(struct note *n) {
     if (!n || n->chord_size == 0) return true;
-    return (n->chord_size == 1 && n->note_name[0] == NOTE_REST);
+    return (n->chord_size == 1 && midi_is_rest(n->midi_note[0]));
 }
 
 // Calculate samples for a note based on its duration in ms
