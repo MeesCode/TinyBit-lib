@@ -20,7 +20,8 @@ typedef enum {
 	SINE,
 	SAW,
 	SQUARE,
-	NOISE
+	NOISE,
+	REST
 } WAVEFORM;
 
 typedef enum {
