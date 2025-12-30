@@ -50,42 +50,6 @@ void lua_setup(lua_State* L) {
     lua_pushinteger(L, TB_MEM_USER_START);
     lua_setglobal(L, "TB_MEM_USER_START");
 
-    // set lua tone variables
-    lua_pushinteger(L, Ab);
-    lua_setglobal(L, "Ab");
-    // lua_pushinteger(L, A);
-    // lua_setglobal(L, "A");
-    lua_pushinteger(L, As);
-    lua_setglobal(L, "As");
-    lua_pushinteger(L, Bb);
-    lua_setglobal(L, "Bb");
-    // lua_pushinteger(L, B);
-    // lua_setglobal(L, "B");
-    lua_pushinteger(L, C);
-    lua_setglobal(L, "C");
-    lua_pushinteger(L, Cs);
-    lua_setglobal(L, "Cs");
-    lua_pushinteger(L, Db);
-    lua_setglobal(L, "Db");
-    lua_pushinteger(L, D);
-    lua_setglobal(L, "D");
-    lua_pushinteger(L, Ds);
-    lua_setglobal(L, "Ds");
-    lua_pushinteger(L, Eb);
-    lua_setglobal(L, "Eb");
-    lua_pushinteger(L, E);
-    lua_setglobal(L, "E");
-    lua_pushinteger(L, F);
-    lua_setglobal(L, "F");
-    lua_pushinteger(L, Fs);
-    lua_setglobal(L, "Fs");
-    lua_pushinteger(L, Gb);
-    lua_setglobal(L, "Gb");
-    lua_pushinteger(L, G);
-    lua_setglobal(L, "G");
-    lua_pushinteger(L, Gs);
-    lua_setglobal(L, "Gs");
-
     // set lua waveforms
     lua_pushinteger(L, SINE);
     lua_setglobal(L, "SINE");
@@ -93,6 +57,8 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "SAW");
     lua_pushinteger(L, SQUARE);
     lua_setglobal(L, "SQUARE");
+    lua_pushinteger(L, NOISE);
+    lua_setglobal(L, "NOISE");
 
     lua_pushinteger(L, TB_SCREEN_WIDTH);
     lua_setglobal(L, "TB_SCREEN_WIDTH");

@@ -13,6 +13,7 @@ target_sources(tinybit_lib INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/pngle/pngle.c
     ${CMAKE_CURRENT_LIST_DIR}/pngle/miniz.c
     ${CMAKE_CURRENT_LIST_DIR}/helpers.c
+    ${CMAKE_CURRENT_LIST_DIR}/ABC-parser/abc_parser.c
 )
 
 # Add Lua sources
@@ -23,4 +24,5 @@ target_include_directories(tinybit_lib INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}
     ${CMAKE_CURRENT_LIST_DIR}/lua
     ${CMAKE_CURRENT_LIST_DIR}/pngle
+    ${CMAKE_CURRENT_LIST_DIR}/ABC-parser
 )

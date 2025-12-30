@@ -2,239 +2,202 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 #include "audio.h"
 #include "tinybit.h"
-#include "helpers.h"
+#include "ABC-parser/abc_parser.h"
 
 #define M_PI 3.14159265358979323846
 #define GAIN 4000
-#define ENVELOPE_MS 40
-#define ENVELOPE_SAMPLES ((TB_AUDIO_SAMPLE_RATE / 1000) * ENVELOPE_MS) // 40ms just sounds pleasant
+#define ENVELOPE_MS 20
+#define ENVELOPE_SAMPLES ((TB_AUDIO_SAMPLE_RATE / 1000) * ENVELOPE_MS)
+
+#define NUM_CHANNELS 4
 
 int bpm = 150;
 int channel = 0;
 int volume = 10;
 
-const float frequencies[12][7] = {
-    { 25.96f, 51.91f, 103.83f, 207.65f, 415.30f, 830.61f,  1661.22f },
-    { 27.50f, 55.00f, 110.00f, 220.00f, 440.00f, 880.00f,  1760.00f },
-    { 29.14f, 58.27f, 116.54f, 233.08f, 466.16f, 932.33f,  1864.66f },
-    { 30.87f, 61.74f, 123.47f, 246.94f, 493.88f, 987.77f,  1975.53f },
-    { 32.70f, 65.41f, 130.81f, 261.63f, 523.25f, 1046.50f, 2093.00f },
-    { 34.65f, 69.30f, 138.59f, 277.18f, 554.37f, 1108.73f, 2217.46f },
-    { 36.71f, 73.42f, 146.83f, 293.66f, 587.33f, 1174.66f, 2349.32f },
-    { 38.89f, 77.78f, 155.56f, 311.13f, 622.25f, 1244.51f, 2489.02f },
-    { 41.20f, 82.41f, 164.81f, 329.63f, 659.26f, 1318.51f, 2637.02f },
-    { 43.65f, 87.31f, 174.61f, 349.23f, 698.46f, 1396.91f, 2793.83f },
-    { 46.25f, 92.50f, 185.00f, 369.99f, 739.99f, 1479.98f, 2959.96f },
-    { 49.00f, 98.00f, 196.00f, 392.00f, 783.99f, 1567.98f, 3135.96f },
-};
-
-struct needle {
-    char audio_string_buffer[256];
-    char* string_pos;
-    TONE tone_note;
-    uint8_t octave_note;
-    DURATION duration_note;
-    WAVEFORM waveform_note;
-    uint32_t sample_processed_note;
-    uint32_t total_samples_note;
-    float frequency_note;
+// Channel state for playback
+struct channel_state {
+    struct sheet sheet;
+    struct note *current_note;
+    uint32_t sample_processed;
+    uint32_t total_samples;
+    float frequency;
     float phase;
+    WAVEFORM waveform;
     bool repeat;
-    bool stop;
+    bool active;
 };
 
-struct needle n1 = {0};
-struct needle n2 = {0};
-struct needle n3 = {0};
-struct needle sfx = {0};
-struct needle audio_needles[4] = {0};
+// Static allocation for ABC parser
+static NotePool note_pools[NUM_CHANNELS];
+static struct channel_state channels[NUM_CHANNELS];
 
-void tb_audio_init(){
-    audio_needles[0] = n1;
-    audio_needles[1] = n2;
-    audio_needles[2] = n3;
-    audio_needles[3] = sfx;
-    strncpy(audio_needles[0].audio_string_buffer, "Q:E4:8 Q:E4:8 R:A0:8 Q:E4:8 R:A0:8 Q:C4:8 Q:E4:8 R:A0:8 Q:G4:8 R:A0:8 R:A0:4 Q:G4:8 R:A0:8 R:A0:4 Q:C4:8 R:A0:8 Q:G4:8 R:A0:8 Q:E4:8 R:A0:8 Q:A4:8 R:A0:8 Q:B4:8 R:A0:8 Q:As4:8 Q:A4:8 R:A0:8", sizeof(audio_needles[0].audio_string_buffer));
-    strncpy(audio_needles[1].audio_string_buffer, "W:G3:8 W:G3:8 R:A0:8 W:G3:8 R:A0:8 W:G3:8 W:G3:8 R:A0:8 W:G3:8 R:A0:8 R:A0:4 W:G2:8 R:A0:8 R:A0:4 W:E3:8 R:A0:8 W:C3:8 R:A0:8 W:G2:8 R:A0:8 W:C3:8 R:A0:8 W:D3:8 R:A0:8 W:C#3:8 W:C3:8 R:A0:8", sizeof(audio_needles[1].audio_string_buffer));
-    //strncpy(audio_needles[2].audio_string_buffer, "N:A0:16 R:A0:16 N:A0:8 N:A0:8 R:A0:16 N:A0:16 R:A0:16 N:A0:16 R:A0:16", sizeof(audio_needles[1].audio_string_buffer));
-    audio_needles[0].repeat = true;
-    audio_needles[1].repeat = true;
-    audio_needles[2].repeat = true;
+// Convert ABC parser frequency to our format
+static float get_frequency_from_note(struct note *n) {
+    if (!n || n->note_name == NOTE_REST) return 0.0f;
+    return n->frequency_x10 / 10.0f;
 }
 
-void get_next_note_from_string(struct needle* audio_needle) {
+// Calculate samples for a note based on its duration in ms
+static uint32_t duration_ms_to_samples(uint16_t duration_ms) {
+    return (uint32_t)duration_ms * TB_AUDIO_SAMPLE_RATE / 1000;
+}
 
-    if(audio_needle->stop) {
-        return;
+void tb_audio_init() {
+    // Initialize all note pools and channels
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+        note_pool_init(&note_pools[i]);
+        sheet_init(&channels[i].sheet, &note_pools[i]);
+        channels[i].current_note = NULL;
+        channels[i].sample_processed = 0;
+        channels[i].total_samples = 0;
+        channels[i].frequency = 0.0f;
+        channels[i].phase = 0.0f;
+        channels[i].waveform = SQUARE;
+        channels[i].repeat = true;
+        channels[i].active = false;
     }
 
-    //printf("new note\n");
+    // Example ABC notation - Super Mario Bros theme approximation
+    const char *abc_channel0 =
+        "X:1\n"
+        "T:Super Mario Theme\n"
+        "M:4/4\n"
+        "L:1/8\n"
+        "Q:1/4=105\n"
+        "K:G\n"
+        "V:SINE\n"
+        "[e/2c/2][ce][ec][c/2A/2][ce] g/2z3z/2|c/2zG/2 zE/2zAB^A/2=A| (3Geg a=f/2gec/2 d/2B/2z|c/2zG/2 zE/2zAB^A/2=A|\n"
+        "V:SQUARE\n"
+        "E4 G4 | C4 z4 | G4 D4 | C4 z4 | \n"
+        "V:SINE\n"
+        "(3Geg a=f/2gec/2 d/2B/2z|zg/2^f/2 =f/2^de^G/2A/2cA/2c/2=d/2|zg/2^f/2 =f/2^dec'c'/2 c'/2z3/2|zg/2^f/2 =f/2^de^G/2A/2cA/2c/2=d/2|\n"
+        "V:SQUARE\n"
+        "G4 D4 | z G3 E4 | z G3 c4 | z G3 E4 | \n"
+        "V:SINE\n"
+        "z^d/2z=d/2z c/2z3z/2|]\n"
+        "V:SQUARE\n"
+        "z ^D3 C/z3z/2|]\n";
 
-    char* pos = audio_needle->string_pos;
+    const char *abc_channel1 =
+        "X:1\n"
+        "T:Channel 2\n"
+        "M:4/4\n"
+        "L:1/8\n"
+        "Q:200\n"
+        "K:C\n"
+        "G, G, z G, z G, G, z | G, z z2 G,, z z2 |\n"
+        "E, z C, z G,, z | C, z D, z ^C, C, z |\n";
 
-    // needle not yet started
-    if (!pos) {
-        pos = audio_needle->audio_string_buffer;
-        audio_needle->string_pos = audio_needle->audio_string_buffer;
-        audio_needle->stop = false;
-
-        // no audio string
-        if(*pos == '\0') {
-            audio_needle->stop = true;
-            return;
+    // Parse ABC for channel 0
+    if (abc_parse(&channels[0].sheet, abc_channel0) == 0) {
+        channels[0].current_note = sheet_first_note(&channels[0].sheet);
+        channels[0].waveform = SINE;
+        channels[0].repeat = true;
+        channels[0].active = true;
+        if (channels[0].current_note) {
+            channels[0].frequency = get_frequency_from_note(channels[0].current_note);
+            channels[0].total_samples = duration_ms_to_samples(channels[0].current_note->duration_ms);
         }
+    }
 
+    // Parse ABC for channel 1
+    if (abc_parse(&channels[1].sheet, abc_channel1) == 0) {
+        channels[1].current_note = sheet_first_note(&channels[1].sheet);
+        channels[1].waveform = SINE;
+        channels[1].repeat = true;
+        channels[1].active = false;
+        if (channels[1].current_note) {
+            channels[1].frequency = get_frequency_from_note(channels[1].current_note);
+            channels[1].total_samples = duration_ms_to_samples(channels[1].current_note->duration_ms);
+        }
+    }
+}
+
+// Advance to the next note in the channel
+static void advance_to_next_note(struct channel_state *ch) {
+    if (!ch->active) return;
+
+    struct note *next = note_next(&ch->sheet, ch->current_note);
+
+    // If no next note and repeat is enabled, loop back to start
+    if (!next && ch->repeat) {
+        next = sheet_first_note(&ch->sheet);
+    }
+
+    if (next) {
+        ch->current_note = next;
+        ch->frequency = get_frequency_from_note(next);
+        ch->total_samples = duration_ms_to_samples(next->duration_ms);
+        ch->sample_processed = 0;
     } else {
-        pos = strnstr(pos, " ", 7); // skip to next note
-
-        // check for end of string
-        if (!pos || *pos == '\0') {
-            // loop or stop
-            if(audio_needle->repeat) {
-                pos = audio_needle->audio_string_buffer;
-                audio_needle->string_pos = audio_needle->audio_string_buffer;
-            } else {
-                audio_needle->stop = true;
-                return;
-            }
-        }else {
-            pos += 1; // move to character after space
-        }
+        ch->active = false;
     }
-
-    // parse waveform
-    switch(*pos) {
-        case 'S': audio_needle->waveform_note = SINE; break;
-        case 'Q': audio_needle->waveform_note = SQUARE; break;
-        case 'W': audio_needle->waveform_note = SAW; break;
-        case 'N': audio_needle->waveform_note = NOISE; break;
-        case 'R': audio_needle->waveform_note = REST; break;
-        default: 
-            printf("Invalid waveform character: %c\n", *pos);
-            audio_needle->stop = true; return; // invalid waveform
-    }
-
-    // parse tone
-    pos = strnstr(pos, ":", 4) + 1; // move to character after ':'
-    switch(*pos) {
-        case 'C': audio_needle->tone_note = C; break;
-        case 'D': audio_needle->tone_note = D; break;
-        case 'E': audio_needle->tone_note = E; break;
-        case 'F': audio_needle->tone_note = F; break;
-        case 'G': audio_needle->tone_note = G; break;
-        case 'A': audio_needle->tone_note = A; break;
-        case 'B': audio_needle->tone_note = B; break;
-        default: 
-            printf("Invalid tone character: %c\n", *pos);
-            audio_needle->stop = true; return; // invalid tone
-    }
-
-    // check for sharp/flat
-    pos += 1; 
-    if (*pos == 's' || *pos == '#') {
-        audio_needle->tone_note = (audio_needle->tone_note + 1) % 12;
-        pos += 1; // move position forward
-    } if( *pos == 'b' || *pos == 'f') {
-        audio_needle->tone_note = (audio_needle->tone_note - 1) % 12;
-        pos += 1; // move position forward
-    }
-
-    // parse octave
-    audio_needle->octave_note = *pos - '0';
-    if(audio_needle->octave_note < 0 || audio_needle->octave_note > 6) {
-        printf("Invalid octave character: %c\n", *pos);
-        audio_needle->stop = true; return; // invalid octave
-    }
-
-    // parse duration
-    pos = strnstr(pos, ":", 4) + 1; // move to character after ':'
-    switch(*pos) {
-        case '1': 
-            if(* (pos + 1) == '6') {
-                audio_needle->duration_note = SIXTEENTH; 
-            } else {
-                audio_needle->duration_note = WHOLE; 
-            }
-        break;
-        case '2': audio_needle->duration_note = HALF; break;
-        case '4': audio_needle->duration_note = QUARTER; break;
-        case '8': audio_needle->duration_note = EIGHTH; break;
-        default: 
-            printf("Invalid duration character: %c\n", *pos);
-            audio_needle->stop = true; return; // invalid duration
-    }
-
-    // calculate total samples for the note
-    audio_needle->frequency_note = frequencies[audio_needle->tone_note][audio_needle->octave_note];
-    audio_needle->total_samples_note = ((60000 / bpm) / 16) * (16-audio_needle->duration_note) * (TB_AUDIO_SAMPLE_RATE / 1000);
-    audio_needle->sample_processed_note = 0;
-    audio_needle->string_pos = pos;
-
-    // printf("Next note: Waveform %d, Tone %d, Octave %d, Duration %d, Total Samples %d\n", 
-    //     audio_needle->waveform_note,
-    //     audio_needle->tone_note,
-    //     audio_needle->octave_note,
-    //     audio_needle->duration_note,
-    //     audio_needle->total_samples_note
-    // );
 }
 
-// Process audio for the current frame (placeholder - not implemented)
+// Process audio for the current frame
 void process_audio() {
-
     memset(tinybit_audio_buffer, 0, TB_AUDIO_FRAME_BUFFER_SIZE);
 
-    for(int ch = 0; ch < 4; ch++) {
-        struct needle *audio_needle = &audio_needles[ch];
+    for (int ch = 0; ch < NUM_CHANNELS; ch++) {
+        struct channel_state *channel = &channels[ch];
 
-        float phase = audio_needle->phase;
-        //printf("new frame audio processing at phase %f\n", x);
+        if (!channel->active || !channel->current_note) continue;
+
+        float phase = channel->phase;
 
         for (int i = 0; i < TB_AUDIO_FRAME_SAMPLES; i++) {
-
-            // grab next note
-            if(audio_needle->sample_processed_note >= audio_needle->total_samples_note) {
-                get_next_note_from_string(audio_needle);
+            // Check if we need to advance to next note
+            if (channel->sample_processed >= channel->total_samples) {
+                advance_to_next_note(channel);
+                if (!channel->active || !channel->current_note) break;
             }
 
             int gain = GAIN;
-            // decay
-            if(audio_needle->total_samples_note - audio_needle->sample_processed_note < ENVELOPE_SAMPLES) {
-                gain = (gain * (audio_needle->total_samples_note - audio_needle->sample_processed_note)) / ENVELOPE_SAMPLES;
-            } 
-            // attack
-            else if(audio_needle->sample_processed_note < ENVELOPE_SAMPLES) {
-                gain = (gain * audio_needle->sample_processed_note) / ENVELOPE_SAMPLES;
+
+            // Decay envelope
+            if (channel->total_samples - channel->sample_processed < ENVELOPE_SAMPLES) {
+                gain = (gain * (channel->total_samples - channel->sample_processed)) / ENVELOPE_SAMPLES;
+            }
+            // Attack envelope
+            else if (channel->sample_processed < ENVELOPE_SAMPLES) {
+                gain = (gain * channel->sample_processed) / ENVELOPE_SAMPLES;
             }
 
-            // update phase
-            phase += audio_needle->frequency_note / TB_AUDIO_SAMPLE_RATE;
+            // Update phase
+            phase += channel->frequency / TB_AUDIO_SAMPLE_RATE;
             if (phase >= 1.0f) phase -= 1.0f;
 
-            switch (audio_needle->waveform_note) {
-            case SQUARE:
-                tinybit_audio_buffer[i] += (int16_t)((phase < 0.5f ? -1 : 1) * gain);
-                break;
-            case SAW:
-                tinybit_audio_buffer[i] += (int16_t)((phase * 2 - 1) * gain);
-                break;
-            case SINE:
-                tinybit_audio_buffer[i] += (int16_t)((sin(2 * M_PI * phase)) * gain);
-                break;
-            case NOISE:
-                tinybit_audio_buffer[i] += (int16_t)((rand() / (float)RAND_MAX * 2.0f - 1.0f) * gain);
-                break;
-            case REST:
-                // For REST, no sound is added, so just break
-                break;
+            // Check if this is a rest note
+            bool is_rest = (channel->current_note->note_name == NOTE_REST);
+
+            if (!is_rest) {
+                switch (channel->waveform) {
+                case SQUARE:
+                    tinybit_audio_buffer[i] += (int16_t)((phase < 0.5f ? -1 : 1) * gain);
+                    break;
+                case SAW:
+                    tinybit_audio_buffer[i] += (int16_t)((phase * 2 - 1) * gain);
+                    break;
+                case SINE:
+                    tinybit_audio_buffer[i] += (int16_t)((sin(2 * M_PI * phase)) * gain);
+                    break;
+                case NOISE:
+                    tinybit_audio_buffer[i] += (int16_t)((rand() / (float)RAND_MAX * 2.0f - 1.0f) * gain);
+                    break;
+                case REST:
+                    // No sound for rest
+                    break;
+                }
             }
 
-            audio_needle->sample_processed_note++;
+            channel->sample_processed++;
         }
-        audio_needle->phase = phase;
+        channel->phase = phase;
     }
 }
 
@@ -242,5 +205,51 @@ void process_audio() {
 void set_bpm(int new_bpm) {
     if (new_bpm > 0) {
         bpm = new_bpm;
+    }
+}
+
+// Load ABC notation into a specific channel
+int audio_load_abc(int channel_num, const char *abc_string, WAVEFORM waveform, bool repeat) {
+    if (channel_num < 0 || channel_num >= NUM_CHANNELS) return -1;
+    if (!abc_string) return -1;
+
+    struct channel_state *ch = &channels[channel_num];
+
+    // Reset the sheet and note pool for this channel
+    sheet_reset(&ch->sheet);
+
+    // Parse the ABC notation
+    if (abc_parse(&ch->sheet, abc_string) != 0) {
+        return -1;
+    }
+
+    // Initialize playback state
+    ch->current_note = sheet_first_note(&ch->sheet);
+    ch->waveform = waveform;
+    ch->repeat = repeat;
+    ch->phase = 0.0f;
+    ch->sample_processed = 0;
+
+    if (ch->current_note) {
+        ch->frequency = get_frequency_from_note(ch->current_note);
+        ch->total_samples = duration_ms_to_samples(ch->current_note->duration_ms);
+        ch->active = true;
+    } else {
+        ch->active = false;
+    }
+
+    return 0;
+}
+
+// Stop a channel
+void audio_stop_channel(int channel_num) {
+    if (channel_num < 0 || channel_num >= NUM_CHANNELS) return;
+    channels[channel_num].active = false;
+}
+
+// Stop all channels
+void audio_stop_all() {
+    for (int i = 0; i < NUM_CHANNELS; i++) {
+        channels[i].active = false;
     }
 }
