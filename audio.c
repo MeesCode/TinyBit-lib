@@ -54,7 +54,7 @@ static WAVEFORM voice_id_to_waveform(const char *voice_id) {
 // Get frequency from note's chord array
 static float get_frequency_from_chord(struct note *n, uint8_t chord_idx) {
     if (!n || chord_idx >= n->chord_size) return 0.0f;
-    if (midi_is_rest(n->midi_note[chord_idx]) == NOTE_REST) return 0.0f;
+    if (midi_is_rest(n->midi_note[chord_idx])) return 0.0f;
     return midi_to_frequency_x10(n->midi_note[chord_idx]) / 10.0f;
 }
 
@@ -64,8 +64,9 @@ static bool is_rest_note(struct note *n) {
     return (n->chord_size == 1 && midi_is_rest(n->midi_note[0]));
 }
 
-// Calculate samples for a note based on its duration in ms
-static uint32_t duration_ms_to_samples(uint16_t duration_ms) {
+// Calculate samples for a note based on its duration in ticks
+static uint32_t duration_ticks_to_samples(uint8_t ticks, uint16_t bpm) {
+    uint16_t duration_ms = ticks_to_ms(ticks, bpm);
     return (uint32_t)duration_ms * TB_AUDIO_SAMPLE_RATE / 1000;
 }
 
@@ -130,8 +131,8 @@ void tb_audio_init() {
             channels[0].voices[v].active = (channels[0].voices[v].current_note != NULL);
 
             if (channels[0].voices[v].current_note) {
-                channels[0].voices[v].total_samples = duration_ms_to_samples(
-                    channels[0].voices[v].current_note->duration_ms);
+                channels[0].voices[v].total_samples = duration_ticks_to_samples(
+                    channels[0].voices[v].current_note->duration, channels[0].sheet.tempo_bpm);
                 channels[0].voices[v].sample_processed = 0;
 
                 // Reset phases for all chord notes
@@ -157,7 +158,7 @@ static void advance_to_next_note(struct channel_state *ch, int voice_idx) {
 
     if (next) {
         ch->voices[voice_idx].current_note = next;
-        ch->voices[voice_idx].total_samples = duration_ms_to_samples(next->duration_ms);
+        ch->voices[voice_idx].total_samples = duration_ticks_to_samples(next->duration, ch->sheet.tempo_bpm);
         ch->voices[voice_idx].sample_processed = 0;
         // Don't reset phase - preserve for smooth transitions
     } else {
@@ -302,8 +303,8 @@ int audio_load_abc(int channel_num, const char *abc_string, WAVEFORM waveform, b
         ch->voices[v].active = (ch->voices[v].current_note != NULL);
 
         if (ch->voices[v].current_note) {
-            ch->voices[v].total_samples = duration_ms_to_samples(
-                ch->voices[v].current_note->duration_ms);
+            ch->voices[v].total_samples = duration_ticks_to_samples(
+                ch->voices[v].current_note->duration, ch->sheet.tempo_bpm);
         }
     }
 
