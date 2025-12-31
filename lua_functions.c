@@ -126,6 +126,10 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "poly_clear");
     lua_pushcfunction(L, poly);
     lua_setglobal(L, "draw_polygon");
+    lua_pushcfunction(L, lua_music);
+    lua_setglobal(L, "music");
+    lua_pushcfunction(L, lua_sfx);
+    lua_setglobal(L, "sfx");
 }
 
 // Lua function to log messages to the console
@@ -438,5 +442,31 @@ int lua_print(lua_State* L) {
     const char* str = luaL_checkstring(L, 1);
 
     font_print(str);
+    return 0;
+}
+
+// Lua function to play a music track
+int lua_music(lua_State* L) {
+
+    if (lua_gettop(L) != 1) {
+        return 0;
+    }
+
+    const char* str = luaL_checkstring(L, 1);
+
+    audio_load_abc(0, str, SINE, true);
+    return 0;
+}
+
+// Lua function to play a short sfx
+int lua_sfx(lua_State* L) {
+
+    if (lua_gettop(L) != 1) {
+        return 0;
+    }
+
+    const char* str = luaL_checkstring(L, 1);
+
+    audio_load_abc(1, str, SINE, false);
     return 0;
 }

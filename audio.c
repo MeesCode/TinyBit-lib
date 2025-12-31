@@ -4,16 +4,19 @@
 #include <string.h>
 #include <stdbool.h>
 
+#define ABC_MAX_CHORD_NOTES 3
+#define ABC_MAX_VOICES 3
+
 #include "audio.h"
 #include "tinybit.h"
 #include "ABC-parser/abc_parser.h"
 
 #define M_PI 3.14159265358979323846
 #define GAIN 4000
-#define ENVELOPE_MS 20
+#define ENVELOPE_MS 10
 #define ENVELOPE_SAMPLES ((TB_AUDIO_SAMPLE_RATE / 1000) * ENVELOPE_MS)
 
-#define NUM_CHANNELS 4
+#define NUM_CHANNELS 2
 #define VOICES_PER_CHANNEL ABC_MAX_VOICES
 
 int bpm = 150;
@@ -97,51 +100,6 @@ void tb_audio_init() {
         channels[i].channel_active = false;
     }
 
-    // Example ABC notation with multiple voices
-    const char *abc_music =
-        "X:1\n"
-        "T:Super Mario Theme\n"
-        "M:4/4\n"
-        "L:1/8\n"
-        "Q:1/4=105\n"
-        "K:G\n"
-        "V:SINE\n"
-        "[e/2c/2][ce][ec][c/2A/2][ce] g/2z3z/2|c/2zG/2 zE/2zAB^A/2=A| (3Geg a=f/2gec/2 d/2B/2z|c/2zG/2 zE/2zAB^A/2=A|\n"
-        "V:2\n"
-        "E4 G4 | C4 z4 | G4 D4 | C4 z4 | \n"
-        "V:SINE\n"
-        "(3Geg a=f/2gec/2 d/2B/2z|zg/2^f/2 =f/2^de^G/2A/2cA/2c/2=d/2|zg/2^f/2 =f/2^dec'c'/2 c'/2z3/2|zg/2^f/2 =f/2^de^G/2A/2cA/2c/2=d/2|\n"
-        "V:2\n"
-        "G4 D4 | z G3 E4 | z G3 c4 | z G3 E4 | \n"
-        "V:SINE\n"
-        "z^d/2z=d/2z c/2z3z/2|]\n"
-        "V:2\n"
-        "z ^D3 C/z3z/2|]\n";
-
-    // Parse ABC for channel 0
-    if (abc_parse(&channels[0].sheet, abc_music) == 0) {
-        channels[0].repeat = true;
-        channels[0].channel_active = true;
-
-        // Initialize each voice from the parsed sheet
-        for (uint8_t v = 0; v < channels[0].sheet.voice_count && v < VOICES_PER_CHANNEL; v++) {
-            NotePool *pool = &channels[0].pools[v];
-            channels[0].voices[v].current_note = pool_first_note(pool);
-            channels[0].voices[v].waveform = voice_id_to_waveform(pool->voice_id);
-            channels[0].voices[v].active = (channels[0].voices[v].current_note != NULL);
-
-            if (channels[0].voices[v].current_note) {
-                channels[0].voices[v].total_samples = duration_ticks_to_samples(
-                    channels[0].voices[v].current_note->duration, channels[0].sheet.tempo_bpm);
-                channels[0].voices[v].sample_processed = 0;
-
-                // Reset phases for all chord notes
-                for (int c = 0; c < ABC_MAX_CHORD_NOTES; c++) {
-                    channels[0].voices[v].phase[c] = 0.0f;
-                }
-            }
-        }
-    }
 }
 
 // Advance to the next note in a voice
