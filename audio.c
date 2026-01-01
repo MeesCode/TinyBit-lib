@@ -19,9 +19,18 @@
 #define NUM_CHANNELS 2
 #define VOICES_PER_CHANNEL ABC_MAX_VOICES
 
+// Bandpass filter Q factor (higher = narrower bandwidth, more tonal)
+#define NOISE_FILTER_Q 8.0f
+
 int bpm = 150;
 int channel = 0;
 int volume = 10;
+
+// Bandpass filter state for pitched noise
+struct bandpass_state {
+    float low;   // Low-pass output
+    float band;  // Band-pass output
+};
 
 // Channel state for playback - each channel can have multiple voices from ABC
 struct channel_state {
@@ -36,6 +45,7 @@ struct channel_state {
         float phase[ABC_MAX_CHORD_NOTES];  // Phase per chord note
         WAVEFORM waveform;
         bool active;
+        struct bandpass_state bp[ABC_MAX_CHORD_NOTES];  // Bandpass filter state per chord note
     } voices[VOICES_PER_CHANNEL];
 
     bool repeat;
@@ -51,7 +61,7 @@ static WAVEFORM voice_id_to_waveform(const char *voice_id) {
     if (strcmp(voice_id, "SAW") == 0) return SAW;
     if (strcmp(voice_id, "SQUARE") == 0) return SQUARE;
     if (strcmp(voice_id, "NOISE") == 0) return NOISE;
-    return SINE;  // Default
+    return NOISE;  // Default
 }
 
 // Get frequency from note's chord array
@@ -71,6 +81,21 @@ static bool is_rest_note(struct note *n) {
 static uint32_t duration_ticks_to_samples(uint8_t ticks, uint16_t bpm) {
     uint16_t duration_ms = ticks_to_ms(ticks, bpm);
     return (uint32_t)duration_ms * TB_AUDIO_SAMPLE_RATE / 1000;
+}
+
+// State-variable bandpass filter for pitched noise
+// Returns the bandpass output centered on the given frequency
+static float bandpass_filter(struct bandpass_state *state, float freq) {
+    // Calculate filter coefficient from frequency
+    float f = 2.0f * sinf((float)M_PI * freq / TB_AUDIO_SAMPLE_RATE);
+    float q = 1.0f / NOISE_FILTER_Q;
+
+    // State-variable filter update
+    state->low += f * state->band;
+    float high = (rand() / (float)RAND_MAX * 2.0f - 1.0f) - state->low - q * state->band;
+    state->band += f * high;
+
+    return state->band;
 }
 
 void tb_audio_init() {
@@ -93,6 +118,8 @@ void tb_audio_init() {
             channels[i].voices[v].active = false;
             for (int c = 0; c < ABC_MAX_CHORD_NOTES; c++) {
                 channels[i].voices[v].phase[c] = 0.0f;
+                channels[i].voices[v].bp[c].low = 0.0f;
+                channels[i].voices[v].bp[c].band = 0.0f;
             }
         }
 
@@ -121,23 +148,6 @@ static void advance_to_next_note(struct channel_state *ch, int voice_idx) {
         // Don't reset phase - preserve for smooth transitions
     } else {
         ch->voices[voice_idx].active = false;
-    }
-}
-
-// Generate sample for a single waveform
-static float generate_waveform(WAVEFORM waveform, float phase) {
-    switch (waveform) {
-    case SQUARE:
-        return (phase < 0.5f ? -1.0f : 1.0f);
-    case SAW:
-        return (phase * 2.0f - 1.0f);
-    case SINE:
-        return sinf(2.0f * (float)M_PI * phase);
-    case NOISE:
-        return (rand() / (float)RAND_MAX * 2.0f - 1.0f);
-    case REST:
-    default:
-        return 0.0f;
     }
 }
 
@@ -183,15 +193,31 @@ void process_audio() {
                     for (uint8_t c = 0; c < note->chord_size && c < ABC_MAX_CHORD_NOTES; c++) {
                         float freq = get_frequency_from_chord(note, c);
                         if (freq > 0.0f) {
+
                             // Update phase for this chord note
                             channel->voices[v].phase[c] += freq / TB_AUDIO_SAMPLE_RATE;
                             if (channel->voices[v].phase[c] >= 1.0f) {
                                 channel->voices[v].phase[c] -= 1.0f;
                             }
 
-                            // Generate and accumulate waveform
-                            sample += generate_waveform(channel->voices[v].waveform,
-                                                        channel->voices[v].phase[c]);
+                            switch (channel->voices[v].waveform) {
+                            case SQUARE:
+                                sample += (channel->voices[v].phase[c] < 0.5f ? -1.0f : 1.0f);
+                                break;
+                            case SAW:
+                                sample += (channel->voices[v].phase[c] * 2.0f - 1.0f);
+                                break;
+                            case SINE:
+                                sample += sinf(2.0f * (float)M_PI * channel->voices[v].phase[c]);
+                                break;
+                            case NOISE: {
+                                sample += bandpass_filter(&channel->voices[v].bp[c], freq);
+                                break;
+                            }
+                            case REST:
+                            default:
+                                sample += 0.0f;
+                            }
                         }
                     }
 
@@ -235,6 +261,8 @@ int audio_load_abc(int channel_num, const char *abc_string, WAVEFORM waveform, b
         ch->voices[v].active = false;
         for (int c = 0; c < ABC_MAX_CHORD_NOTES; c++) {
             ch->voices[v].phase[c] = 0.0f;
+            ch->voices[v].bp[c].low = 0.0f;
+            ch->voices[v].bp[c].band = 0.0f;
         }
     }
 
