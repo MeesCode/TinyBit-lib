@@ -4,8 +4,9 @@
 #include <string.h>
 #include <stdbool.h>
 
-#define ABC_MAX_CHORD_NOTES 3
-#define ABC_MAX_VOICES 3
+#define MY_ABC_MAX_CHORD_NOTES 3
+#define MY_ABC_MAX_VOICES 3
+#define MY_ABC_MAX_NOTES 512
 
 #include "audio.h"
 #include "tinybit.h"
@@ -17,7 +18,6 @@
 #define ENVELOPE_SAMPLES ((TB_AUDIO_SAMPLE_RATE / 1000) * ENVELOPE_MS)
 
 #define NUM_CHANNELS 2
-#define VOICES_PER_CHANNEL ABC_MAX_VOICES
 
 // Bandpass filter Q factor (higher = narrower bandwidth, more tonal)
 #define NOISE_FILTER_Q 8.0f
@@ -35,18 +35,19 @@ struct bandpass_state {
 // Channel state for playback - each channel can have multiple voices from ABC
 struct channel_state {
     struct sheet sheet;
-    NotePool pools[VOICES_PER_CHANNEL];  // Note pools for voices in this channel
+    NotePool pools[MY_ABC_MAX_VOICES];  // Note pools for voices in this channel
+    struct note g_note_storage[MY_ABC_MAX_VOICES][MY_ABC_MAX_NOTES];
 
     // Per-voice playback state
     struct {
         struct note *current_note;
         uint32_t sample_processed;
         uint32_t total_samples;
-        float phase[ABC_MAX_CHORD_NOTES];  // Phase per chord note
+        float phase[MY_ABC_MAX_CHORD_NOTES];  // Phase per chord note
         WAVEFORM waveform;
         bool active;
-        struct bandpass_state bp[ABC_MAX_CHORD_NOTES];  // Bandpass filter state per chord note
-    } voices[VOICES_PER_CHANNEL];
+        struct bandpass_state bp[MY_ABC_MAX_CHORD_NOTES];  // Bandpass filter state per chord note
+    } voices[MY_ABC_MAX_VOICES];
 
     bool repeat;
     bool channel_active;
@@ -56,12 +57,12 @@ static struct channel_state channels[NUM_CHANNELS];
 
 // Map voice ID to waveform
 static WAVEFORM voice_id_to_waveform(const char *voice_id) {
-    if (!voice_id || voice_id[0] == '\0') return SQUARE;
+    if (!voice_id || voice_id[0] == '\0') return SINE;
     if (strcmp(voice_id, "SINE") == 0) return SINE;
     if (strcmp(voice_id, "SAW") == 0) return SAW;
     if (strcmp(voice_id, "SQUARE") == 0) return SQUARE;
     if (strcmp(voice_id, "NOISE") == 0) return NOISE;
-    return NOISE;  // Default
+    return SINE;  // Default
 }
 
 // Get frequency from note's chord array
@@ -102,21 +103,21 @@ void tb_audio_init() {
     // Initialize all channels
     for (int i = 0; i < NUM_CHANNELS; i++) {
         // Initialize note pools for this channel
-        for (int v = 0; v < VOICES_PER_CHANNEL; v++) {
-            note_pool_init(&channels[i].pools[v]);
+        for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
+            note_pool_init_ext(&channels[i].pools[v], &channels[i].g_note_storage[v], MY_ABC_MAX_NOTES, MY_ABC_MAX_CHORD_NOTES);
         }
 
         // Initialize sheet with pools
-        sheet_init(&channels[i].sheet, channels[i].pools, VOICES_PER_CHANNEL);
+        sheet_init(&channels[i].sheet, channels[i].pools, MY_ABC_MAX_VOICES);
 
         // Initialize voice states
-        for (int v = 0; v < VOICES_PER_CHANNEL; v++) {
+        for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
             channels[i].voices[v].current_note = NULL;
             channels[i].voices[v].sample_processed = 0;
             channels[i].voices[v].total_samples = 0;
             channels[i].voices[v].waveform = SINE;
             channels[i].voices[v].active = false;
-            for (int c = 0; c < ABC_MAX_CHORD_NOTES; c++) {
+            for (int c = 0; c < MY_ABC_MAX_CHORD_NOTES; c++) {
                 channels[i].voices[v].phase[c] = 0.0f;
                 channels[i].voices[v].bp[c].low = 0.0f;
                 channels[i].voices[v].bp[c].band = 0.0f;
@@ -131,7 +132,7 @@ void tb_audio_init() {
 
 // Advance to the next note in a voice
 static void advance_to_next_note(struct channel_state *ch, int voice_idx) {
-    if (voice_idx >= VOICES_PER_CHANNEL) return;
+    if (voice_idx >= MY_ABC_MAX_VOICES) return;
 
     NotePool *pool = &ch->pools[voice_idx];
     struct note *next = note_next(pool, ch->voices[voice_idx].current_note);
@@ -161,7 +162,7 @@ void process_audio() {
         if (!channel->channel_active) continue;
 
         // Process each voice in this channel
-        for (uint8_t v = 0; v < channel->sheet.voice_count && v < VOICES_PER_CHANNEL; v++) {
+        for (uint8_t v = 0; v < channel->sheet.voice_count && v < MY_ABC_MAX_VOICES; v++) {
             if (!channel->voices[v].active || !channel->voices[v].current_note) continue;
 
             for (int i = 0; i < TB_AUDIO_FRAME_SAMPLES; i++) {
@@ -190,7 +191,7 @@ void process_audio() {
                     float sample = 0.0f;
 
                     // Sum all chord notes
-                    for (uint8_t c = 0; c < note->chord_size && c < ABC_MAX_CHORD_NOTES; c++) {
+                    for (uint8_t c = 0; c < note->chord_size && c < MY_ABC_MAX_CHORD_NOTES; c++) {
                         float freq = get_frequency_from_chord(note, c);
                         if (freq > 0.0f) {
 
@@ -254,12 +255,12 @@ int audio_load_abc(int channel_num, const char *abc_string, WAVEFORM waveform, b
     sheet_reset(&ch->sheet);
 
     // Reset voice states
-    for (int v = 0; v < VOICES_PER_CHANNEL; v++) {
+    for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
         ch->voices[v].current_note = NULL;
         ch->voices[v].sample_processed = 0;
         ch->voices[v].total_samples = 0;
         ch->voices[v].active = false;
-        for (int c = 0; c < ABC_MAX_CHORD_NOTES; c++) {
+        for (int c = 0; c < MY_ABC_MAX_CHORD_NOTES; c++) {
             ch->voices[v].phase[c] = 0.0f;
             ch->voices[v].bp[c].low = 0.0f;
             ch->voices[v].bp[c].band = 0.0f;
@@ -275,7 +276,7 @@ int audio_load_abc(int channel_num, const char *abc_string, WAVEFORM waveform, b
     ch->repeat = repeat;
 
     // Initialize each parsed voice
-    for (uint8_t v = 0; v < ch->sheet.voice_count && v < VOICES_PER_CHANNEL; v++) {
+    for (uint8_t v = 0; v < ch->sheet.voice_count && v < MY_ABC_MAX_VOICES; v++) {
         NotePool *pool = &ch->pools[v];
         ch->voices[v].current_note = pool_first_note(pool);
 
@@ -296,7 +297,7 @@ int audio_load_abc(int channel_num, const char *abc_string, WAVEFORM waveform, b
 
     // Channel is active if at least one voice is active
     ch->channel_active = false;
-    for (int v = 0; v < VOICES_PER_CHANNEL; v++) {
+    for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
         if (ch->voices[v].active) {
             ch->channel_active = true;
             break;
@@ -310,7 +311,7 @@ int audio_load_abc(int channel_num, const char *abc_string, WAVEFORM waveform, b
 void audio_stop_channel(int channel_num) {
     if (channel_num < 0 || channel_num >= NUM_CHANNELS) return;
     channels[channel_num].channel_active = false;
-    for (int v = 0; v < VOICES_PER_CHANNEL; v++) {
+    for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
         channels[channel_num].voices[v].active = false;
     }
 }
