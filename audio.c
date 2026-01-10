@@ -104,7 +104,7 @@ void tb_audio_init() {
     for (int i = 0; i < NUM_CHANNELS; i++) {
         // Initialize note pools for this channel
         for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
-            note_pool_init_ext(&channels[i].pools[v], &channels[i].g_note_storage[v], MY_ABC_MAX_NOTES, MY_ABC_MAX_CHORD_NOTES);
+            note_pool_init(&channels[i].pools[v], &channels[i].g_note_storage[v], MY_ABC_MAX_NOTES, MY_ABC_MAX_CHORD_NOTES);
         }
 
         // Initialize sheet with pools
@@ -203,10 +203,10 @@ void process_audio() {
 
                             switch (channel->voices[v].waveform) {
                             case SQUARE:
-                                sample += (channel->voices[v].phase[c] < 0.5f ? -1.0f : 1.0f);
+                                sample += (channel->voices[v].phase[c] < 0.5f ? -0.4f : 0.4f);
                                 break;
                             case SAW:
-                                sample += (channel->voices[v].phase[c] * 2.0f - 1.0f);
+                                sample += (channel->voices[v].phase[c] - 0.5f);
                                 break;
                             case SINE:
                                 sample += sinf(2.0f * (float)M_PI * channel->voices[v].phase[c]);
