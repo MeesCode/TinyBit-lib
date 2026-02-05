@@ -104,7 +104,7 @@ void tb_audio_init() {
     for (int i = 0; i < NUM_CHANNELS; i++) {
         // Initialize note pools for this channel
         for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
-            note_pool_init(&channels[i].pools[v], &channels[i].g_note_storage[v], MY_ABC_MAX_NOTES, MY_ABC_MAX_CHORD_NOTES);
+            note_pool_init(&channels[i].pools[v], channels[i].g_note_storage[v], MY_ABC_MAX_NOTES, MY_ABC_MAX_CHORD_NOTES);
         }
 
         // Initialize sheet with pools
