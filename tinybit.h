@@ -43,6 +43,14 @@
 #define TB_COVER_X 35
 #define TB_COVER_Y 34
 
+// Audio configuration
+#define TB_AUDIO_SAMPLE_RATE 22000
+#define TB_AUDIO_FRAME_SAMPLES (TB_AUDIO_SAMPLE_RATE / 60) // samples per ~60fps frame
+#define TB_AUDIO_FRAME_BUFFER_SIZE (TB_AUDIO_FRAME_SAMPLES * sizeof(int16_t))
+
+// Audio frame buffer pointer - filled by game each frame, played by host
+extern int16_t* tinybit_audio_buffer;
+
 PACKED_STRUCT(TinyBitMemory) {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
     uint8_t display[TB_MEM_DISPLAY_SIZE];
@@ -63,7 +71,7 @@ enum TinyBitButton {
 };
 
 // Core TinyBit API functions
-void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr);
+void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr, int16_t* audio_buffer);
 bool tinybit_feed_cartridge(const uint8_t* cartridge_buffer, size_t bytes);
 bool tinybit_start();
 void tinybit_loop();
@@ -77,6 +85,7 @@ void tinybit_render_cb(void (*render_func_ptr)());
 void tinybit_poll_input_cb(void (*poll_input_func_ptr)());
 void tinybit_gamecount_cb(int (*gamecount_func_ptr)());
 void tinybit_gameload_cb(void (*gameload_func_ptr)(int index));
+void tinybit_audio_queue_cb(void (*audio_queue_func_ptr)());
 
 
 #endif

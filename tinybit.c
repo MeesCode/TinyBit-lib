@@ -22,6 +22,9 @@
 static size_t cartridge_index = 0; // index for cartridge buffer
 static bool running = true;
 
+// Audio frame buffer pointer - allocated by host, filled by game each frame
+int16_t* tinybit_audio_buffer = NULL;
+
 static lua_State* L;
 
 static pngle_t *pngle;
@@ -33,7 +36,7 @@ static void (*frame_func)();
 static void (*input_func)();
 static void (*sleep_func)();
 static int (*get_ticks_ms_func)();
-static int (*get_ticks_ms_func)();
+static void (*audio_queue_func)();
 
 // Decode PNG pixel data and load game assets (spritesheet and script) into memory
 void decode_pixel_load_game(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
@@ -143,13 +146,14 @@ int lua_gameload(lua_State* L) {
     return 0;
 }
 
-// Initialize the TinyBit system with memory and input state pointers
-void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
-    if (!memory || !button_state_ptr) {
+// Initialize the TinyBit system with memory, input state, and audio buffer pointers
+void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr, int16_t* audio_buffer) {
+    if (!memory || !button_state_ptr || !audio_buffer) {
         return; // Error: null pointer
     }
 
     tinybit_memory = memory;
+    tinybit_audio_buffer = audio_buffer;
     init_input(button_state_ptr);
 
     pngle = pngle_new();
@@ -159,6 +163,7 @@ void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
 
     // initialize memory
     memory_init();
+    tb_audio_init();
     
     // set up lua VM
     L = luaL_newstate();
@@ -222,14 +227,20 @@ bool tinybit_feed_cartridge(const uint8_t* buffer, size_t size){
 // Main emulation loop - handles input, executes Lua draw function, and renders frames
 void tinybit_loop() {
 
+    uint32_t start_time;
     uint32_t render_time;
+    uint32_t input_time;
     uint32_t display_time;
+    uint32_t audio_time;
 
     while(running){
         frame_time = get_ticks_ms_func();
+        start_time = frame_time;
 
         // get button input
         input_func();
+        input_time = get_ticks_ms_func() - start_time;
+        start_time += input_time;
 
         // perform lua draw function every frame
         lua_getglobal(L, "_draw");
@@ -240,15 +251,27 @@ void tinybit_loop() {
             printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
             break; // runtime error in lua code
         }
+        render_time = get_ticks_ms_func() - start_time;
+        start_time += render_time;
 
         // save current button state
         save_button_state();
 
-        render_time = get_ticks_ms_func() - frame_time;
-        frame_func();
-        display_time = get_ticks_ms_func() - frame_time - render_time;
+        // process audio for this frame
+        process_audio();
+        if (audio_queue_func) {
+            audio_queue_func();
+            memset(tinybit_audio_buffer, 0, TB_AUDIO_FRAME_BUFFER_SIZE);
+        }
+        audio_time = get_ticks_ms_func() - start_time;
+        start_time += audio_time;
 
-        //printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time);
+        // call render callback to display the frame
+        frame_func();
+        display_time = get_ticks_ms_func() - start_time;
+        start_time += display_time;
+
+        // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
 
         // cap to ~60fps
         int delay = (16 - (get_ticks_ms_func() - frame_time));
@@ -321,6 +344,15 @@ void tinybit_get_ticks_ms_cb(int (*get_ticks_ms_func_ptr)()) {
     if (!get_ticks_ms_func_ptr) {
         return; // Error: null pointer
     }
-    
+
     get_ticks_ms_func = get_ticks_ms_func_ptr;
+}
+
+// Set callback function for queuing audio each frame
+void tinybit_audio_queue_cb(void (*audio_queue_func_ptr)()) {
+    if (!audio_queue_func_ptr) {
+        return; // Error: null pointer
+    }
+
+    audio_queue_func = audio_queue_func_ptr;
 }

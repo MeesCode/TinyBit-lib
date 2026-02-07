@@ -20,10 +20,6 @@ int lua_rect(lua_State* L);
 int lua_line(lua_State* L);
 int lua_oval(lua_State* L);
 int lua_pset(lua_State* L);
-int lua_tone(lua_State* L);
-int lua_noise(lua_State* L);
-int lua_volume(lua_State* L);
-int lua_channel(lua_State* L);
 int lua_bpm(lua_State* L);
 int lua_btn(lua_State* L);
 int lua_btnp(lua_State* L);
@@ -37,5 +33,7 @@ int lua_text(lua_State* L);
 int lua_poly_add(lua_State* L);
 int lua_poly_clear(lua_State* L);
 int poly(lua_State* L);
+int lua_music(lua_State* L);
+int lua_sfx(lua_State* L);
 
 #endif

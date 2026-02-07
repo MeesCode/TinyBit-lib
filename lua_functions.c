@@ -50,42 +50,6 @@ void lua_setup(lua_State* L) {
     lua_pushinteger(L, TB_MEM_USER_START);
     lua_setglobal(L, "TB_MEM_USER_START");
 
-    // set lua tone variables
-    lua_pushinteger(L, Ab);
-    lua_setglobal(L, "Ab");
-    // lua_pushinteger(L, A);
-    // lua_setglobal(L, "A");
-    lua_pushinteger(L, As);
-    lua_setglobal(L, "As");
-    lua_pushinteger(L, Bb);
-    lua_setglobal(L, "Bb");
-    // lua_pushinteger(L, B);
-    // lua_setglobal(L, "B");
-    lua_pushinteger(L, C);
-    lua_setglobal(L, "C");
-    lua_pushinteger(L, Cs);
-    lua_setglobal(L, "Cs");
-    lua_pushinteger(L, Db);
-    lua_setglobal(L, "Db");
-    lua_pushinteger(L, D);
-    lua_setglobal(L, "D");
-    lua_pushinteger(L, Ds);
-    lua_setglobal(L, "Ds");
-    lua_pushinteger(L, Eb);
-    lua_setglobal(L, "Eb");
-    lua_pushinteger(L, E);
-    lua_setglobal(L, "E");
-    lua_pushinteger(L, F);
-    lua_setglobal(L, "F");
-    lua_pushinteger(L, Fs);
-    lua_setglobal(L, "Fs");
-    lua_pushinteger(L, Gb);
-    lua_setglobal(L, "Gb");
-    lua_pushinteger(L, G);
-    lua_setglobal(L, "G");
-    lua_pushinteger(L, Gs);
-    lua_setglobal(L, "Gs");
-
     // set lua waveforms
     lua_pushinteger(L, SINE);
     lua_setglobal(L, "SINE");
@@ -93,6 +57,8 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "SAW");
     lua_pushinteger(L, SQUARE);
     lua_setglobal(L, "SQUARE");
+    lua_pushinteger(L, NOISE);
+    lua_setglobal(L, "NOISE");
 
     lua_pushinteger(L, TB_SCREEN_WIDTH);
     lua_setglobal(L, "TB_SCREEN_WIDTH");
@@ -130,10 +96,6 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "rect");
     lua_pushcfunction(L, lua_oval);
     lua_setglobal(L, "oval");
-    lua_pushcfunction(L, lua_tone);
-    lua_setglobal(L, "tone");
-    lua_pushcfunction(L, lua_noise);
-    lua_setglobal(L, "noise");
     lua_pushcfunction(L, lua_bpm);
     lua_setglobal(L, "bpm");
     lua_pushcfunction(L, lua_btn);
@@ -164,6 +126,10 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "poly_clear");
     lua_pushcfunction(L, poly);
     lua_setglobal(L, "draw_polygon");
+    lua_pushcfunction(L, lua_music);
+    lua_setglobal(L, "music");
+    lua_pushcfunction(L, lua_sfx);
+    lua_setglobal(L, "sfx");
 }
 
 // Lua function to log messages to the console
@@ -387,87 +353,6 @@ int poly(lua_State* L) {
     return 0;
 }
 
-// Lua function to play a musical tone
-int lua_tone(lua_State* L) {
-    if (lua_gettop(L) < 4 && lua_gettop(L) > 6) {
-        return 0;
-    }
-
-    TONE tone = luaL_checkinteger(L, 1);
-    int octave = luaL_checkinteger(L, 2);
-    int eights = luaL_checkinteger(L, 3);
-    WAVEFORM wf = luaL_checkinteger(L, 4);
-
-    if(lua_gettop(L) == 4) {
-        play_tone(tone, octave, eights, wf, volume, channel);
-        return 0;
-    }
-
-    int vol = luaL_checkinteger(L, 5);
-
-    if(lua_gettop(L) == 5) {
-        play_tone(tone, octave, eights, wf, vol, channel);
-        return 0;
-    }
-
-    int chan = luaL_checkinteger(L, 6);
-
-    if(lua_gettop(L) == 6) {
-        play_tone(tone, octave, eights, wf, vol, chan);
-    }
-
-    
-    return 0;
-}
-
-// Lua function to play white noise
-int lua_noise(lua_State* L) {
-    if (lua_gettop(L) == 1) {
-        int eights = luaL_checkinteger(L, 1);
-        play_noise(eights, volume, channel);
-        return 0;
-    }
-
-    if (lua_gettop(L) == 2) {
-        int eights = luaL_checkinteger(L, 1);
-        int vol = luaL_checkinteger(L, 2);
-        play_noise(eights, vol, channel);
-        return 0;
-    }
-
-    if (lua_gettop(L) == 3) {
-        int eights = luaL_checkinteger(L, 1);
-        int vol = luaL_checkinteger(L, 2);
-        int chan = luaL_checkinteger(L, 3);
-        play_noise(eights, vol, chan);
-        return 0;
-    }
-
-    return 0;
-}
-
-// Lua function to set global audio volume
-int lua_volume(lua_State* L) {
-    if (lua_gettop(L) != 1) {
-        return 0;
-    }
-
-    int new_volume = luaL_checkinteger(L, 1);
-    set_volume(new_volume);
-    return 0;
-}
-
-// Lua function to set current audio channel
-int lua_channel(lua_State* L) {
-    if (lua_gettop(L) != 1) {
-        return 0;
-    }
-
-    int new_channel = luaL_checkinteger(L, 1);
-    set_channel(new_channel);
-    return 0;
-}
-
 // Lua function to set beats per minute for audio timing
 int lua_bpm(lua_State* L) {
     int new_bpm = luaL_checkinteger(L, 1);
@@ -557,5 +442,31 @@ int lua_print(lua_State* L) {
     const char* str = luaL_checkstring(L, 1);
 
     font_print(str);
+    return 0;
+}
+
+// Lua function to play a music track
+int lua_music(lua_State* L) {
+
+    if (lua_gettop(L) != 1) {
+        return 0;
+    }
+
+    const char* str = luaL_checkstring(L, 1);
+
+    audio_load_abc(0, str, SINE, true);
+    return 0;
+}
+
+// Lua function to play a short sfx
+int lua_sfx(lua_State* L) {
+
+    if (lua_gettop(L) != 1) {
+        return 0;
+    }
+
+    const char* str = luaL_checkstring(L, 1);
+
+    audio_load_abc(1, str, SINE, false);
     return 0;
 }
