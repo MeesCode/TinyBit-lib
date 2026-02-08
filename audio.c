@@ -203,10 +203,12 @@ void process_audio() {
 
                             switch (channel->voices[v].waveform) {
                             case SQUARE:
-                                sample += (channel->voices[v].phase[c] < 0.5f ? -0.4f : 0.4f);
+                                // apply volume correction to match perceived loudness of sine wave
+                                sample += (channel->voices[v].phase[c] < 0.5f ? -0.4f : 0.4f); 
                                 break;
                             case SAW:
-                                sample += (channel->voices[v].phase[c] - 0.5f);
+                                // apply volume correction to match perceived loudness of sine wave
+                                sample += (channel->voices[v].phase[c] - 0.5f ) * 0.4f; 
                                 break;
                             case SINE:
                                 sample += sinf(2.0f * (float)M_PI * channel->voices[v].phase[c]);
