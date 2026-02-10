@@ -233,58 +233,53 @@ void tinybit_loop() {
     uint32_t display_time;
     uint32_t audio_time;
 
-    while(running){
-        frame_time = get_ticks_ms_func();
-        start_time = frame_time;
+    frame_time = get_ticks_ms_func();
+    start_time = frame_time;
 
-        // get button input
-        input_func();
-        input_time = get_ticks_ms_func() - start_time;
-        start_time += input_time;
+    // INPUT
+    input_func();
+    input_time = get_ticks_ms_func() - start_time;
+    start_time += input_time;
 
-        // perform lua draw function every frame
-        lua_getglobal(L, "_draw");
-        if (lua_pcall(L, 0, 1, 0) == LUA_OK) {
-            lua_pop(L, lua_gettop(L));
-        } else {
-            lua_pop(L, lua_gettop(L)); // pop error message
-            printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
-            break; // runtime error in lua code
-        }
-        render_time = get_ticks_ms_func() - start_time;
-        start_time += render_time;
-
-        // save current button state
-        save_button_state();
-
-        // process audio for this frame
-        process_audio();
-        if (audio_queue_func) {
-            audio_queue_func();
-            memset(tinybit_audio_buffer, 0, TB_AUDIO_FRAME_BUFFER_SIZE);
-        }
-        audio_time = get_ticks_ms_func() - start_time;
-        start_time += audio_time;
-
-        // call render callback to display the frame
-        frame_func();
-        display_time = get_ticks_ms_func() - start_time;
-        start_time += display_time;
-
-        // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
-
-        // cap to ~60fps
-        int delay = (16 - (get_ticks_ms_func() - frame_time));
-        if (delay > 0) {
-            sleep_func(delay);
-        }
+    // LOGIC
+    lua_getglobal(L, "_draw");
+    if (lua_pcall(L, 0, 1, 0) == LUA_OK) {
+        lua_pop(L, lua_gettop(L));
+    } else {
+        lua_pop(L, lua_gettop(L)); // pop error message
+        printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
+        return; // runtime error in lua code
     }
+    render_time = get_ticks_ms_func() - start_time;
+    start_time += render_time;
 
-    lua_close(L);
-    L = NULL;
+    // save current button state
+    save_button_state();
 
-    pngle_destroy(pngle);
-    pngle = NULL;
+    // AUDIO
+    process_audio();
+    if (audio_queue_func) {
+        audio_queue_func();
+    }
+    audio_time = get_ticks_ms_func() - start_time;
+    start_time += audio_time;
+
+    // RENDER
+    if (frame_func) {
+        frame_func();
+    }
+    display_time = get_ticks_ms_func() - start_time;
+    start_time += display_time;
+
+    // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
+
+
+    // TODO: add cleanup function somewhere
+    // lua_close(L);
+    // L = NULL;
+
+    // pngle_destroy(pngle);
+    // pngle = NULL;
 }
 
 // Set callback function for counting available games
