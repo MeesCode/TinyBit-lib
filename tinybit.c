@@ -150,7 +150,6 @@ void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
     }
 
     tinybit_memory = memory;
-    init_input(button_state_ptr);
 
     pngle = pngle_new();
 

@@ -155,7 +155,7 @@ static void advance_to_next_note(struct channel_state *ch, int voice_idx) {
 
 // Process audio for the current frame
 void process_audio() {
-    memset(tinybit_memory->audio_buffer, 0, TB_AUDIO_BUFFER_SIZE);
+    memset(tinybit_memory->audio_buffer, 0, TB_MEM_AUDIO_BUFFER_SIZE);
 
     for (int ch_idx = 0; ch_idx < NUM_CHANNELS; ch_idx++) {
         struct channel_state *channel = &channels[ch_idx];

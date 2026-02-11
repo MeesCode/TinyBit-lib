@@ -29,17 +29,20 @@
 #define TB_SCREEN_HEIGHT 128
 
 // Memory sizes
-#define TB_MEM_SPRITESHEET_START 0x00000
-#define TB_MEM_SPRITESHEET_SIZE  0x08000 // 32Kb
-#define TB_MEM_DISPLAY_START     (TB_MEM_SPRITESHEET_START + TB_MEM_SPRITESHEET_SIZE)
-#define TB_MEM_DISPLAY_SIZE      0x08000 // 32Kb
-#define TB_MEM_SCRIPT_START      (TB_MEM_DISPLAY_START + TB_MEM_DISPLAY_SIZE)
-#define TB_MEM_SCRIPT_SIZE       0x03000 // 12Kb
-#define TB_AUDIO_BUFFER_START    (TB_MEM_SCRIPT_START + TB_MEM_SCRIPT_SIZE)
-#define TB_AUDIO_BUFFER_SIZE     0x00400 // 1Kb
-#define TB_MEM_USER_START        (TB_AUDIO_BUFFER_START + TB_AUDIO_BUFFER_SIZE)
-#define TB_MEM_USER_SIZE         0x00C00 // 3Kb
-#define TB_MEM_SIZE              (TB_MEM_SPRITESHEET_SIZE + TB_MEM_DISPLAY_SIZE + TB_MEM_SCRIPT_SIZE + TB_AUDIO_BUFFER_SIZE + TB_MEM_USER_SIZE) // 80Kb
+#define TB_MEM_SIZE                 0x14000 // 80Kb total
+
+#define TB_MEM_SPRITESHEET_START    0x00000
+#define TB_MEM_SPRITESHEET_SIZE     0x08000 // 32Kb
+#define TB_MEM_DISPLAY_START        (TB_MEM_SPRITESHEET_START + TB_MEM_SPRITESHEET_SIZE)
+#define TB_MEM_DISPLAY_SIZE         0x08000 // 32Kb
+#define TB_MEM_SCRIPT_START         (TB_MEM_DISPLAY_START + TB_MEM_DISPLAY_SIZE)
+#define TB_MEM_SCRIPT_SIZE          0x03000 // 12Kb
+#define TB_MEM_AUDIO_BUFFER_START   (TB_MEM_SCRIPT_START + TB_MEM_SCRIPT_SIZE)
+#define TB_MEM_AUDIO_BUFFER_SIZE    734 // 734 bytes (367 16-bit samples)
+#define TB_MEM_BUTTON_INPUT         (TB_MEM_AUDIO_BUFFER_START + TB_MEM_AUDIO_BUFFER_SIZE)
+#define TB_MEM_BUTTON_INPUT_SIZE    8 // 8 bytes (button inputs)
+#define TB_MEM_USER_START           (TB_MEM_BUTTON_INPUT + TB_MEM_BUTTON_INPUT_SIZE)
+#define TB_MEM_USER_SIZE            (TB_MEM_SIZE - TB_MEM_USER_START) // remaining memory for user
 
 // define cover location
 #define TB_COVER_X 35
@@ -47,13 +50,14 @@
 
 // Audio configuration
 #define TB_AUDIO_SAMPLE_RATE 22000
-#define TB_AUDIO_FRAME_SAMPLES (TB_AUDIO_SAMPLE_RATE / 60) // samples per ~60fps frame
+#define TB_AUDIO_FRAME_SAMPLES 367 // samples per 60fps frame
 
 PACKED_STRUCT(TinyBitMemory) {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
     uint8_t display[TB_MEM_DISPLAY_SIZE];
     uint8_t script[TB_MEM_SCRIPT_SIZE];
-    int16_t audio_buffer[TB_AUDIO_BUFFER_SIZE / 2];
+    int16_t audio_buffer[TB_MEM_AUDIO_BUFFER_SIZE / 2];
+    uint8_t button_input[TB_MEM_BUTTON_INPUT_SIZE];
     uint8_t user[TB_MEM_USER_SIZE];
 };
 
