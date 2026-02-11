@@ -11,6 +11,7 @@
 #include "audio.h"
 #include "tinybit.h"
 #include "ABC-parser/abc_parser.h"
+#include "memory.h"
 
 #define M_PI 3.14159265358979323846
 #define GAIN 4000
@@ -154,7 +155,7 @@ static void advance_to_next_note(struct channel_state *ch, int voice_idx) {
 
 // Process audio for the current frame
 void process_audio() {
-    memset(tinybit_audio_buffer, 0, TB_AUDIO_FRAME_BUFFER_SIZE);
+    memset(tinybit_memory->audio_buffer, 0, TB_AUDIO_BUFFER_SIZE);
 
     for (int ch_idx = 0; ch_idx < NUM_CHANNELS; ch_idx++) {
         struct channel_state *channel = &channels[ch_idx];
@@ -229,7 +230,7 @@ void process_audio() {
                         sample /= note->chord_size;
                     }
 
-                    tinybit_audio_buffer[i] += (int16_t)(sample * gain);
+                    tinybit_memory->audio_buffer[i] += (int16_t)(sample * gain);
                 }
 
                 channel->voices[v].sample_processed++;

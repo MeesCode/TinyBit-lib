@@ -35,9 +35,11 @@
 #define TB_MEM_DISPLAY_SIZE      0x08000 // 32Kb
 #define TB_MEM_SCRIPT_START      (TB_MEM_DISPLAY_START + TB_MEM_DISPLAY_SIZE)
 #define TB_MEM_SCRIPT_SIZE       0x03000 // 12Kb
-#define TB_MEM_USER_START        (TB_MEM_SCRIPT_START + TB_MEM_SCRIPT_SIZE)
-#define TB_MEM_USER_SIZE         0x01000 // 4Kb
-#define TB_MEM_SIZE              (TB_MEM_SPRITESHEET_SIZE + TB_MEM_DISPLAY_SIZE + TB_MEM_SCRIPT_SIZE + TB_MEM_USER_SIZE) // 80Kb
+#define TB_AUDIO_BUFFER_START    (TB_MEM_SCRIPT_START + TB_MEM_SCRIPT_SIZE)
+#define TB_AUDIO_BUFFER_SIZE     0x00400 // 1Kb
+#define TB_MEM_USER_START        (TB_AUDIO_BUFFER_START + TB_AUDIO_BUFFER_SIZE)
+#define TB_MEM_USER_SIZE         0x00C00 // 3Kb
+#define TB_MEM_SIZE              (TB_MEM_SPRITESHEET_SIZE + TB_MEM_DISPLAY_SIZE + TB_MEM_SCRIPT_SIZE + TB_AUDIO_BUFFER_SIZE + TB_MEM_USER_SIZE) // 80Kb
 
 // define cover location
 #define TB_COVER_X 35
@@ -46,15 +48,12 @@
 // Audio configuration
 #define TB_AUDIO_SAMPLE_RATE 22000
 #define TB_AUDIO_FRAME_SAMPLES (TB_AUDIO_SAMPLE_RATE / 60) // samples per ~60fps frame
-#define TB_AUDIO_FRAME_BUFFER_SIZE (TB_AUDIO_FRAME_SAMPLES * sizeof(int16_t))
-
-// Audio frame buffer pointer - filled by game each frame, played by host
-extern int16_t* tinybit_audio_buffer;
 
 PACKED_STRUCT(TinyBitMemory) {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
     uint8_t display[TB_MEM_DISPLAY_SIZE];
     uint8_t script[TB_MEM_SCRIPT_SIZE];
+    int16_t audio_buffer[TB_AUDIO_BUFFER_SIZE / 2];
     uint8_t user[TB_MEM_USER_SIZE];
 };
 
@@ -71,11 +70,11 @@ enum TinyBitButton {
 };
 
 // Core TinyBit API functions
-void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr, int16_t* audio_buffer);
+void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr);
 bool tinybit_feed_cartridge(const uint8_t* cartridge_buffer, size_t bytes);
 bool tinybit_start();
 void tinybit_loop();
-void tinybit_quit();
+void tinybit_stop();
 
 // Callback function setters
 void tinybit_log_cb(void (*log_func_ptr)(const char*));

@@ -22,9 +22,6 @@
 static size_t cartridge_index = 0; // index for cartridge buffer
 static bool running = true;
 
-// Audio frame buffer pointer - allocated by host, filled by game each frame
-int16_t* tinybit_audio_buffer = NULL;
-
 static lua_State* L;
 
 static pngle_t *pngle;
@@ -147,13 +144,12 @@ int lua_gameload(lua_State* L) {
 }
 
 // Initialize the TinyBit system with memory, input state, and audio buffer pointers
-void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr, int16_t* audio_buffer) {
-    if (!memory || !button_state_ptr || !audio_buffer) {
+void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
+    if (!memory || !button_state_ptr) {
         return; // Error: null pointer
     }
 
     tinybit_memory = memory;
-    tinybit_audio_buffer = audio_buffer;
     init_input(button_state_ptr);
 
     pngle = pngle_new();
@@ -215,8 +211,14 @@ bool tinybit_start(){
 }
 
 // Signal the emulation loop to quit
-void tinybit_quit() {
+void tinybit_stop() {
     running = false;
+
+    lua_close(L);
+    L = NULL;
+
+    pngle_destroy(pngle);
+    pngle = NULL;
 }
 
 // Feed cartridge PNG data to the TinyBit decoder
@@ -272,14 +274,6 @@ void tinybit_loop() {
     start_time += display_time;
 
     // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
-
-
-    // TODO: add cleanup function somewhere
-    // lua_close(L);
-    // L = NULL;
-
-    // pngle_destroy(pngle);
-    // pngle = NULL;
 }
 
 // Set callback function for counting available games
