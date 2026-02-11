@@ -29,6 +29,8 @@ static pngle_t *pngle;
 static int (*gamecount_func)();
 static void (*gameload_func)(int index);
 
+int ud;
+
 static void (*frame_func)();
 static void (*input_func)();
 static void (*sleep_func)();
@@ -143,6 +145,38 @@ int lua_gameload(lua_State* L) {
     return 0;
 }
 
+void *l_alloc_restricted (void *ud, void *ptr, size_t osize, size_t nsize){
+    const int MAX_SIZE = 1024*50; /* set limit here */
+    int *used = (int *)ud;
+
+    if(ptr == NULL) {
+        /*
+        * <http://www.lua.org/manual/5.2/manual.html#lua_Alloc>:
+        * When ptr is NULL, osize encodes the kind of object that Lua is
+        * allocating.
+        *
+        * Since we don’t care about that, just mark it as 0.
+        */
+        osize = 0;
+    }
+
+    if (nsize == 0)
+    {
+        free(ptr);
+        *used -= osize; /* substract old size from used memory */
+        return NULL;
+    }
+    else
+    {
+        if (*used + (nsize - osize) > MAX_SIZE) /* too much memory in use */
+        return NULL;
+        ptr = realloc(ptr, nsize);
+        if (ptr) /* reallocation successful? */
+        *used += (nsize - osize);
+        return ptr;
+    }
+}
+
 // Initialize the TinyBit system with memory, input state, and audio buffer pointers
 void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
     if (!memory || !button_state_ptr) {
@@ -161,7 +195,7 @@ void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
     tb_audio_init();
     
     // set up lua VM
-    L = luaL_newstate();
+    L = lua_newstate(l_alloc_restricted, &ud);
     lua_setup(L);
 
     // add special functions to lua for reading game files
@@ -271,6 +305,8 @@ void tinybit_loop() {
     }
     display_time = get_ticks_ms_func() - start_time;
     start_time += display_time;
+
+    printf("used memory: %d bytes\n", ud);
 
     // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
 }
