@@ -4,6 +4,8 @@ add_library(tinybit_lib INTERFACE)
 
 target_sources(tinybit_lib INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/tinybit.c
+    ${CMAKE_CURRENT_LIST_DIR}/lua_pool.c
+    ${CMAKE_CURRENT_LIST_DIR}/cartridge.c
     ${CMAKE_CURRENT_LIST_DIR}/graphics.c
     ${CMAKE_CURRENT_LIST_DIR}/font.c
     ${CMAKE_CURRENT_LIST_DIR}/input.c

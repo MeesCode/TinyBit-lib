@@ -29,7 +29,7 @@
 #define TB_SCREEN_HEIGHT 128
 
 // Memory sizes
-#define TB_MEM_SIZE                 0x14000 // 80Kb total
+#define TB_MEM_SIZE                 0x20000 // 128Kb total
 
 #define TB_MEM_SPRITESHEET_START    0x00000
 #define TB_MEM_SPRITESHEET_SIZE     0x08000 // 32Kb
@@ -37,7 +37,9 @@
 #define TB_MEM_DISPLAY_SIZE         0x08000 // 32Kb
 #define TB_MEM_SCRIPT_START         (TB_MEM_DISPLAY_START + TB_MEM_DISPLAY_SIZE)
 #define TB_MEM_SCRIPT_SIZE          0x03000 // 12Kb
-#define TB_MEM_AUDIO_BUFFER_START   (TB_MEM_SCRIPT_START + TB_MEM_SCRIPT_SIZE)
+#define TB_MEM_LUA_STATE_START      (TB_MEM_SCRIPT_START + TB_MEM_SCRIPT_SIZE)
+#define TB_MEM_LUA_STATE_SIZE       0x0C800 // 50Kb
+#define TB_MEM_AUDIO_BUFFER_START   (TB_MEM_LUA_STATE_START + TB_MEM_LUA_STATE_SIZE)
 #define TB_MEM_AUDIO_BUFFER_SIZE    734 // 734 bytes (367 16-bit samples)
 #define TB_MEM_BUTTON_INPUT         (TB_MEM_AUDIO_BUFFER_START + TB_MEM_AUDIO_BUFFER_SIZE)
 #define TB_MEM_BUTTON_INPUT_SIZE    8 // 8 bytes (button inputs)
@@ -56,6 +58,7 @@ PACKED_STRUCT(TinyBitMemory) {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
     uint8_t display[TB_MEM_DISPLAY_SIZE];
     uint8_t script[TB_MEM_SCRIPT_SIZE];
+    uint8_t lua_state[TB_MEM_LUA_STATE_SIZE];
     int16_t audio_buffer[TB_MEM_AUDIO_BUFFER_SIZE / 2];
     uint8_t button_input[TB_MEM_BUTTON_INPUT_SIZE];
     uint8_t user[TB_MEM_USER_SIZE];
@@ -86,8 +89,6 @@ void tinybit_sleep_cb(void (*sleep_func_ptr)(int ms));
 void tinybit_get_ticks_ms_cb(int (*get_ticks_ms_func_ptr)());
 void tinybit_render_cb(void (*render_func_ptr)());
 void tinybit_poll_input_cb(void (*poll_input_func_ptr)());
-void tinybit_gamecount_cb(int (*gamecount_func_ptr)());
-void tinybit_gameload_cb(void (*gameload_func_ptr)(int index));
 void tinybit_audio_queue_cb(void (*audio_queue_func_ptr)());
 
 
