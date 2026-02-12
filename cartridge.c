@@ -97,10 +97,6 @@ static int lua_gameload(lua_State* L) {
 
     pngle_reset(pngle);
     pngle_set_draw_callback(pngle, decode_pixel_load_game);
-    // Clear memory but preserve lua_state (the pool allocator's heap)
-    memset(tinybit_memory, 0, TB_MEM_LUA_STATE_START);
-    memset((uint8_t*)tinybit_memory + TB_MEM_LUA_STATE_START + TB_MEM_LUA_STATE_SIZE, 0,
-           TB_MEM_SIZE - TB_MEM_LUA_STATE_START - TB_MEM_LUA_STATE_SIZE);
 
     int index = luaL_checkinteger(L, 1);
     gameload_func(index);

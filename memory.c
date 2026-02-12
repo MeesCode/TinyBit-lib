@@ -8,9 +8,7 @@ struct TinyBitMemory* tinybit_memory;
 
 // Initialize TinyBit memory by clearing all sections (preserving lua_state)
 void memory_init() {
-    memset(tinybit_memory, 0, TB_MEM_LUA_STATE_START);
-    memset((uint8_t*)tinybit_memory + TB_MEM_LUA_STATE_START + TB_MEM_LUA_STATE_SIZE, 0,
-           TB_MEM_SIZE - TB_MEM_LUA_STATE_START - TB_MEM_LUA_STATE_SIZE);
+    memset(tinybit_memory, 0, TB_MEM_SIZE);
 }
 
 // Copy memory from source to destination within TinyBit memory space

@@ -37,11 +37,10 @@ void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
 
     tinybit_memory = memory;
 
-    cartridge_init();
-
     // initialize memory
     memory_init();
     tb_audio_init();
+    cartridge_init();
 
     // set up lua VM
     L = lua_pool_newstate();

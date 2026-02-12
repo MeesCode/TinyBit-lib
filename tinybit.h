@@ -3,22 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#include "lua/lua.h"
-#include "lua/lualib.h"
-#include "lua/lauxlib.h"
-
-#if defined(_MSC_VER)
-    // Microsoft Visual Studio
-    #define PACKED_STRUCT(name) __pragma(pack(push, 1)) struct name __pragma(pack(pop))
-#elif defined(__GNUC__) || defined(__clang__)
-    // GCC or Clang
-    #define PACKED_STRUCT(name) struct __attribute__((__packed__)) name
-#else
-    // Fallback (may need adjustment per compiler)
-    #define PACKED_STRUCT(name) struct name
-    #pragma message("Packing is not defined for this compiler. Please define PACKED_STRUCT manually.")
-#endif
+#include <stddef.h>
 
 // cartridge dimensions
 #define TB_CARTRIDGE_WIDTH 200
@@ -28,41 +13,35 @@
 #define TB_SCREEN_WIDTH 128
 #define TB_SCREEN_HEIGHT 128
 
-// Memory sizes
-#define TB_MEM_SIZE                 0x20000 // 128Kb total
+// Audio configuration
+#define TB_AUDIO_SAMPLE_RATE 22000
+#define TB_AUDIO_FRAME_SAMPLES 367 // samples per 60fps frame
 
-#define TB_MEM_SPRITESHEET_START    0x00000
-#define TB_MEM_SPRITESHEET_SIZE     0x08000 // 32Kb
-#define TB_MEM_DISPLAY_START        (TB_MEM_SPRITESHEET_START + TB_MEM_SPRITESHEET_SIZE)
-#define TB_MEM_DISPLAY_SIZE         0x08000 // 32Kb
-#define TB_MEM_SCRIPT_START         (TB_MEM_DISPLAY_START + TB_MEM_DISPLAY_SIZE)
-#define TB_MEM_SCRIPT_SIZE          0x03000 // 12Kb
-#define TB_MEM_LUA_STATE_START      (TB_MEM_SCRIPT_START + TB_MEM_SCRIPT_SIZE)
-#define TB_MEM_LUA_STATE_SIZE       0x0C800 // 50Kb
-#define TB_MEM_AUDIO_BUFFER_START   (TB_MEM_LUA_STATE_START + TB_MEM_LUA_STATE_SIZE)
-#define TB_MEM_AUDIO_BUFFER_SIZE    734 // 734 bytes (367 16-bit samples)
+// Memory sizes
+#define TB_MEM_SPRITESHEET_SIZE     (32 * 1024) // 32Kb
+#define TB_MEM_DISPLAY_SIZE         (32 * 1024) // 32Kb
+#define TB_MEM_SCRIPT_SIZE          (12 * 1024) // 12Kb
+#define TB_MEM_LUA_STATE_SIZE       (60 * 1024) // 60Kb
+#define TB_MEM_AUDIO_BUFFER_SIZE    (TB_AUDIO_FRAME_SAMPLES * 2) // 734 bytes (367 16-bit samples)
 #define TB_MEM_BUTTON_INPUT         (TB_MEM_AUDIO_BUFFER_START + TB_MEM_AUDIO_BUFFER_SIZE)
 #define TB_MEM_BUTTON_INPUT_SIZE    8 // 8 bytes (button inputs)
-#define TB_MEM_USER_START           (TB_MEM_BUTTON_INPUT + TB_MEM_BUTTON_INPUT_SIZE)
-#define TB_MEM_USER_SIZE            (TB_MEM_SIZE - TB_MEM_USER_START) // remaining memory for user
+#define TB_MEM_USER_SIZE            (10 * 1024) // 10Kb
 
 // define cover location
 #define TB_COVER_X 35
 #define TB_COVER_Y 34
 
-// Audio configuration
-#define TB_AUDIO_SAMPLE_RATE 22000
-#define TB_AUDIO_FRAME_SAMPLES 367 // samples per 60fps frame
-
-PACKED_STRUCT(TinyBitMemory) {
+struct TinyBitMemory {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
     uint8_t display[TB_MEM_DISPLAY_SIZE];
     uint8_t script[TB_MEM_SCRIPT_SIZE];
     uint8_t lua_state[TB_MEM_LUA_STATE_SIZE];
-    int16_t audio_buffer[TB_MEM_AUDIO_BUFFER_SIZE / 2];
+    int16_t audio_buffer[TB_AUDIO_FRAME_SAMPLES];
     uint8_t button_input[TB_MEM_BUTTON_INPUT_SIZE];
     uint8_t user[TB_MEM_USER_SIZE];
 };
+
+#define TB_MEM_SIZE (sizeof(struct TinyBitMemory))
 
 enum TinyBitButton {
     TB_BUTTON_A,
