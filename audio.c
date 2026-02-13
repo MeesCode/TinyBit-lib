@@ -54,11 +54,7 @@ struct channel_state {
     bool channel_active;
 };
 
-// Separate note storage: music channel gets full 400 notes, SFX channel only needs 10
-static struct note music_note_storage[MY_ABC_MAX_VOICES][MUSIC_MAX_NOTES];
-static struct note sfx_note_storage[MY_ABC_MAX_VOICES][SFX_MAX_NOTES];
-
-static struct channel_state channels[NUM_CHANNELS];
+static struct channel_state *channels;
 
 // Map voice ID to waveform
 static WAVEFORM voice_id_to_waveform(const char *voice_id) {
@@ -129,11 +125,24 @@ static void init_channel(struct channel_state *ch, struct note *storage[], uint1
 }
 
 void tb_audio_init() {
-    struct note *music_ptrs[MY_ABC_MAX_VOICES] = {
-        music_note_storage[0], music_note_storage[1], music_note_storage[2]
-    };
+
+    const size_t sfx_notes_size = sizeof(struct note) * MY_ABC_MAX_VOICES * SFX_MAX_NOTES;
+    const size_t music_notes_size = sizeof(struct note) * MY_ABC_MAX_VOICES * MUSIC_MAX_NOTES;
+
+    // Layout in audio_data: [sfx notes][music notes][channel states]
+    struct note *sfx_base = (struct note *)tinybit_memory->audio_data;
+    struct note *music_base = (struct note *)(tinybit_memory->audio_data + sfx_notes_size);
+    channels = (struct channel_state *)(tinybit_memory->audio_data + sfx_notes_size + music_notes_size);
+
     struct note *sfx_ptrs[MY_ABC_MAX_VOICES] = {
-        sfx_note_storage[0], sfx_note_storage[1], sfx_note_storage[2]
+        &sfx_base[0 * SFX_MAX_NOTES],
+        &sfx_base[1 * SFX_MAX_NOTES],
+        &sfx_base[2 * SFX_MAX_NOTES]
+    };
+    struct note *music_ptrs[MY_ABC_MAX_VOICES] = {
+        &music_base[0 * MUSIC_MAX_NOTES],
+        &music_base[1 * MUSIC_MAX_NOTES],
+        &music_base[2 * MUSIC_MAX_NOTES]
     };
 
     init_channel(&channels[CHANNEL_MUSIC], music_ptrs, MUSIC_MAX_NOTES);
