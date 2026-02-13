@@ -3,10 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #define MY_ABC_MAX_CHORD_NOTES 3
 #define MY_ABC_MAX_VOICES 3
-#define MY_ABC_MAX_NOTES 512
+#define MUSIC_MAX_NOTES 400
+#define SFX_MAX_NOTES 10
 
 #include "audio.h"
 #include "tinybit.h"
@@ -17,8 +19,6 @@
 #define GAIN 4000
 #define ENVELOPE_MS 10
 #define ENVELOPE_SAMPLES ((TB_AUDIO_SAMPLE_RATE / 1000) * ENVELOPE_MS)
-
-#define NUM_CHANNELS 2
 
 // Bandpass filter Q factor (higher = narrower bandwidth, more tonal)
 #define NOISE_FILTER_Q 8.0f
@@ -34,10 +34,10 @@ struct bandpass_state {
 };
 
 // Channel state for playback - each channel can have multiple voices from ABC
+// Note storage is external (separate arrays for music vs SFX to save memory)
 struct channel_state {
     struct sheet sheet;
-    NotePool pools[MY_ABC_MAX_VOICES];  // Note pools for voices in this channel
-    struct note g_note_storage[MY_ABC_MAX_VOICES][MY_ABC_MAX_NOTES];
+    NotePool pools[MY_ABC_MAX_VOICES];
 
     // Per-voice playback state
     struct {
@@ -53,6 +53,10 @@ struct channel_state {
     bool repeat;
     bool channel_active;
 };
+
+// Separate note storage: music channel gets full 400 notes, SFX channel only needs 10
+static struct note music_note_storage[MY_ABC_MAX_VOICES][MUSIC_MAX_NOTES];
+static struct note sfx_note_storage[MY_ABC_MAX_VOICES][SFX_MAX_NOTES];
 
 static struct channel_state channels[NUM_CHANNELS];
 
@@ -100,35 +104,40 @@ static float bandpass_filter(struct bandpass_state *state, float freq) {
     return state->band;
 }
 
-void tb_audio_init() {
-    // Initialize all channels
-    for (int i = 0; i < NUM_CHANNELS; i++) {
-        // Initialize note pools for this channel
-        for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
-            note_pool_init(&channels[i].pools[v], channels[i].g_note_storage[v], MY_ABC_MAX_NOTES, MY_ABC_MAX_CHORD_NOTES);
-        }
-
-        // Initialize sheet with pools
-        sheet_init(&channels[i].sheet, channels[i].pools, MY_ABC_MAX_VOICES);
-
-        // Initialize voice states
-        for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
-            channels[i].voices[v].current_note = NULL;
-            channels[i].voices[v].sample_processed = 0;
-            channels[i].voices[v].total_samples = 0;
-            channels[i].voices[v].waveform = SINE;
-            channels[i].voices[v].active = false;
-            for (int c = 0; c < MY_ABC_MAX_CHORD_NOTES; c++) {
-                channels[i].voices[v].phase[c] = 0.0f;
-                channels[i].voices[v].bp[c].low = 0.0f;
-                channels[i].voices[v].bp[c].band = 0.0f;
-            }
-        }
-
-        channels[i].repeat = true;
-        channels[i].channel_active = false;
+static void init_channel(struct channel_state *ch, struct note *storage[], uint16_t note_capacity) {
+    for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
+        note_pool_init(&ch->pools[v], storage[v], note_capacity, MY_ABC_MAX_CHORD_NOTES);
     }
 
+    sheet_init(&ch->sheet, ch->pools, MY_ABC_MAX_VOICES);
+
+    for (int v = 0; v < MY_ABC_MAX_VOICES; v++) {
+        ch->voices[v].current_note = NULL;
+        ch->voices[v].sample_processed = 0;
+        ch->voices[v].total_samples = 0;
+        ch->voices[v].waveform = SINE;
+        ch->voices[v].active = false;
+        for (int c = 0; c < MY_ABC_MAX_CHORD_NOTES; c++) {
+            ch->voices[v].phase[c] = 0.0f;
+            ch->voices[v].bp[c].low = 0.0f;
+            ch->voices[v].bp[c].band = 0.0f;
+        }
+    }
+
+    ch->repeat = true;
+    ch->channel_active = false;
+}
+
+void tb_audio_init() {
+    struct note *music_ptrs[MY_ABC_MAX_VOICES] = {
+        music_note_storage[0], music_note_storage[1], music_note_storage[2]
+    };
+    struct note *sfx_ptrs[MY_ABC_MAX_VOICES] = {
+        sfx_note_storage[0], sfx_note_storage[1], sfx_note_storage[2]
+    };
+
+    init_channel(&channels[CHANNEL_MUSIC], music_ptrs, MUSIC_MAX_NOTES);
+    init_channel(&channels[CHANNEL_SFX], sfx_ptrs, SFX_MAX_NOTES);
 }
 
 // Advance to the next note in a voice
@@ -155,6 +164,8 @@ static void advance_to_next_note(struct channel_state *ch, int voice_idx) {
 
 // Process audio for the current frame
 void process_audio() {
+    // printf("channels struct size %d\n", sizeof(channels[CHANNEL_MUSIC]) + sizeof(channels[CHANNEL_SFX]) + sizeof(struct note) * MY_ABC_MAX_VOICES * MUSIC_MAX_NOTES+sizeof(struct note) * MY_ABC_MAX_VOICES * SFX_MAX_NOTES);
+
     memset(tinybit_memory->audio_buffer, 0, TB_MEM_AUDIO_BUFFER_SIZE);
 
     for (int ch_idx = 0; ch_idx < NUM_CHANNELS; ch_idx++) {

@@ -17,6 +17,10 @@
 #define TB_AUDIO_SAMPLE_RATE 22000
 #define TB_AUDIO_FRAME_SAMPLES 367 // samples per 60fps frame
 
+// define cover location
+#define TB_COVER_X 35
+#define TB_COVER_Y 34
+
 // Memory sizes
 #define TB_MEM_SPRITESHEET_SIZE     (32 * 1024) // 32Kb
 #define TB_MEM_DISPLAY_SIZE         (32 * 1024) // 32Kb
@@ -26,10 +30,6 @@
 #define TB_MEM_BUTTON_INPUT         (TB_MEM_AUDIO_BUFFER_START + TB_MEM_AUDIO_BUFFER_SIZE)
 #define TB_MEM_BUTTON_INPUT_SIZE    8 // 8 bytes (button inputs)
 #define TB_MEM_USER_SIZE            (10 * 1024) // 10Kb
-
-// define cover location
-#define TB_COVER_X 35
-#define TB_COVER_Y 34
 
 struct TinyBitMemory {
     uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
