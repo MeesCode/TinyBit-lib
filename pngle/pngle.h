@@ -44,7 +44,10 @@ typedef void (*pngle_done_callback_t)(pngle_t *pngle);
 // ----------------
 // Basic interfaces
 // ----------------
+pngle_t *pngle_init(void); // initialize and return a pngle_t (statically allocated when PNGLE_STATIC_ALLOC is defined)
+#ifndef PNGLE_STATIC_ALLOC
 pngle_t *pngle_new();
+#endif
 void pngle_destroy(pngle_t *pngle);
 void pngle_reset(pngle_t *pngle); // clear its internal state (not applied to pngle_set_* functions)
 const char *pngle_error(pngle_t *pngle);

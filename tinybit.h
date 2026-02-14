@@ -33,7 +33,7 @@
 #define TB_MEM_USER_SIZE            (10 * 1024) // 10Kb
 
 struct TinyBitMemory {
-    uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE]; 
+    uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE];
     uint8_t display[TB_MEM_DISPLAY_SIZE];
     uint8_t script[TB_MEM_SCRIPT_SIZE];
     uint8_t lua_state[TB_MEM_LUA_STATE_SIZE];

@@ -115,15 +115,12 @@ static int lua_gameload(lua_State* L) {
 }
 
 void cartridge_init(void) {
-    pngle = pngle_new();
+    pngle = pngle_init();
     pngle_set_draw_callback(pngle, decode_pixel_load_game);
 }
 
 void cartridge_destroy(void) {
-    if (pngle) {
-        pngle_destroy(pngle);
-        pngle = NULL;
-    }
+    pngle_destroy(pngle);
 }
 
 bool cartridge_feed(const uint8_t* buffer, size_t size) {

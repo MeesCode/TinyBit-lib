@@ -28,3 +28,9 @@ target_include_directories(tinybit_lib INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/pngle
     ${CMAKE_CURRENT_LIST_DIR}/ABC-parser
 )
+
+target_compile_definitions(tinybit_lib INTERFACE
+    PNGLE_STATIC_ALLOC
+    PNGLE_NO_GAMMA_CORRECTION
+    MINIZ_NO_MALLOC
+)
