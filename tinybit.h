@@ -27,6 +27,7 @@
 #define TB_MEM_SCRIPT_SIZE          (12 * 1024) // 12Kb
 #define TB_MEM_LUA_STATE_SIZE       (60 * 1024) // 60Kb
 #define TB_MEM_AUDIO_DATA_SIZE      (12 * 1024) // 12Kb
+#define TB_MEM_PNGLE_SIZE           (48 * 1024) // 48Kb
 #define TB_MEM_AUDIO_BUFFER_SIZE    (TB_AUDIO_FRAME_SAMPLES * 2) // 734 bytes (367 16-bit samples)
 #define TB_MEM_BUTTON_INPUT         (TB_MEM_AUDIO_BUFFER_START + TB_MEM_AUDIO_BUFFER_SIZE)
 #define TB_MEM_BUTTON_INPUT_SIZE    8 // 8 bytes (button inputs)
@@ -38,6 +39,7 @@ struct TinyBitMemory {
     uint8_t script[TB_MEM_SCRIPT_SIZE];
     uint8_t lua_state[TB_MEM_LUA_STATE_SIZE];
     uint8_t audio_data[TB_MEM_AUDIO_DATA_SIZE];
+    uint8_t pngle_data[TB_MEM_PNGLE_SIZE];
     int16_t audio_buffer[TB_AUDIO_FRAME_SAMPLES];
     uint8_t button_input[TB_MEM_BUTTON_INPUT_SIZE];
     uint8_t user[TB_MEM_USER_SIZE];

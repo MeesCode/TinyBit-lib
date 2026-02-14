@@ -115,7 +115,7 @@ static int lua_gameload(lua_State* L) {
 }
 
 void cartridge_init(void) {
-    pngle = pngle_init();
+    pngle = pngle_init(tinybit_memory->pngle_data, TB_MEM_PNGLE_SIZE);
     pngle_set_draw_callback(pngle, decode_pixel_load_game);
 }
 

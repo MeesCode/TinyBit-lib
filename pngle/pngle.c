@@ -229,15 +229,14 @@ void pngle_reset(pngle_t *pngle)
 	tinfl_init(&pngle->inflator);
 }
 
-#ifdef PNGLE_STATIC_ALLOC
-static pngle_t pngle_static_instance;
-#endif
-
-pngle_t *pngle_init(void)
+pngle_t *pngle_init(void *buf, size_t buf_size)
 {
 #ifdef PNGLE_STATIC_ALLOC
-	pngle_t *pngle = &pngle_static_instance;
+	if (!buf || buf_size < sizeof(pngle_t)) return NULL;
+	pngle_t *pngle = (pngle_t *)buf;
 #else
+	PNGLE_UNUSED(buf);
+	PNGLE_UNUSED(buf_size);
 	pngle_t *pngle = (pngle_t *)PNGLE_CALLOC(1, sizeof(pngle_t), "pngle_t");
 	if (!pngle) return NULL;
 #endif
@@ -249,7 +248,7 @@ pngle_t *pngle_init(void)
 #ifndef PNGLE_STATIC_ALLOC
 pngle_t *pngle_new()
 {
-	return pngle_init();
+	return pngle_init(NULL, 0);
 }
 #endif
 
