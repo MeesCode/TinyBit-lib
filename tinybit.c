@@ -28,10 +28,12 @@ static void (*input_func)();
 static void (*sleep_func)();
 static int (*get_ticks_ms_func)();
 static void (*audio_queue_func)();
+int (*gamecount_func)();
+void (*gameload_func)(int index);
 
 // Initialize the TinyBit system with memory, input state, and audio buffer pointers
-void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr) {
-    if (!memory || !button_state_ptr) {
+void tinybit_init(struct TinyBitMemory* memory) {
+    if (!memory) {
         return; // Error: null pointer
     }
 
@@ -203,4 +205,18 @@ void tinybit_audio_queue_cb(void (*audio_queue_func_ptr)()) {
     }
 
     audio_queue_func = audio_queue_func_ptr;
+}
+
+void tinybit_gamecount_cb(int (*gamecount_func_ptr)()) {
+    if (!gamecount_func_ptr) {
+        return;
+    }
+    gamecount_func = gamecount_func_ptr;
+}
+
+void tinybit_gameload_cb(void (*gameload_func_ptr)(int index)) {
+    if (!gameload_func_ptr) {
+        return;
+    }
+    gameload_func = gameload_func_ptr;
 }

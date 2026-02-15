@@ -59,11 +59,14 @@ enum TinyBitButton {
 };
 
 // Core TinyBit API functions
-void tinybit_init(struct TinyBitMemory* memory, bool* button_state_ptr);
+void tinybit_init(struct TinyBitMemory* memory);
 bool tinybit_feed_cartridge(const uint8_t* cartridge_buffer, size_t bytes);
 bool tinybit_start();
 void tinybit_loop();
 void tinybit_stop();
+
+int (*gamecount_func)();
+void (*gameload_func)(int index);
 
 // Callback function setters
 void tinybit_log_cb(void (*log_func_ptr)(const char*));
@@ -72,6 +75,7 @@ void tinybit_get_ticks_ms_cb(int (*get_ticks_ms_func_ptr)());
 void tinybit_render_cb(void (*render_func_ptr)());
 void tinybit_poll_input_cb(void (*poll_input_func_ptr)());
 void tinybit_audio_queue_cb(void (*audio_queue_func_ptr)());
-
+void tinybit_gamecount_cb(int (*gamecount_func_ptr)());
+void tinybit_gameload_cb(void (*gameload_func_ptr)(int index));
 
 #endif
