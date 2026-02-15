@@ -28,8 +28,6 @@ static void (*input_func)();
 static void (*sleep_func)();
 static int (*get_ticks_ms_func)();
 static void (*audio_queue_func)();
-int (*gamecount_func)();
-void (*gameload_func)(int index);
 
 // Initialize the TinyBit system with memory, input state, and audio buffer pointers
 void tinybit_init(struct TinyBitMemory* memory) {

@@ -2,6 +2,9 @@
 
 #include <string.h>
 
+int (*gamecount_func)();
+void (*gameload_func)(int index);
+
 #include "lua/lua.h"
 #include "lua/lualib.h"
 #include "lua/lauxlib.h"

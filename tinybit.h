@@ -65,9 +65,6 @@ bool tinybit_start();
 void tinybit_loop();
 void tinybit_stop();
 
-int (*gamecount_func)();
-void (*gameload_func)(int index);
-
 // Callback function setters
 void tinybit_log_cb(void (*log_func_ptr)(const char*));
 void tinybit_sleep_cb(void (*sleep_func_ptr)(int ms));
