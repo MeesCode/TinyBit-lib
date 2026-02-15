@@ -26,6 +26,7 @@
 #define __PNGLE_H__
 
 #include <stdint.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -44,7 +45,10 @@ typedef void (*pngle_done_callback_t)(pngle_t *pngle);
 // ----------------
 // Basic interfaces
 // ----------------
+pngle_t *pngle_init(void *buf, size_t buf_size); // initialize and return a pngle_t, buf/buf_size used when PNGLE_STATIC_ALLOC is defined
+#ifndef PNGLE_STATIC_ALLOC
 pngle_t *pngle_new();
+#endif
 void pngle_destroy(pngle_t *pngle);
 void pngle_reset(pngle_t *pngle); // clear its internal state (not applied to pngle_set_* functions)
 const char *pngle_error(pngle_t *pngle);

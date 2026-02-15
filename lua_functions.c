@@ -36,20 +36,6 @@ void lua_setup(lua_State* L) {
         lua_pop(L, 1);  /* remove lib */
     }
 
-    // setup global variables
-    lua_pushinteger(L, TB_MEM_SIZE);
-    lua_setglobal(L, "MEM_SIZE");
-    lua_pushinteger(L, TB_MEM_SPRITESHEET_START);
-    lua_setglobal(L, "TB_MEM_SPRITESHEET_START");
-    lua_pushinteger(L, TB_MEM_SPRITESHEET_SIZE);
-    lua_setglobal(L, "TB_MEM_SPRITESHEET_SIZE");
-    lua_pushinteger(L, TB_MEM_DISPLAY_START);
-    lua_setglobal(L, "TB_MEM_DISPLAY_START");
-    lua_pushinteger(L, TB_MEM_DISPLAY_SIZE);
-    lua_setglobal(L, "TB_MEM_DISPLAY_SIZE");
-    lua_pushinteger(L, TB_MEM_USER_START);
-    lua_setglobal(L, "TB_MEM_USER_START");
-
     // set lua waveforms
     lua_pushinteger(L, SINE);
     lua_setglobal(L, "SINE");

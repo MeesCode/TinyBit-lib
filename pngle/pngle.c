@@ -45,6 +45,32 @@
 
 #define PNGLE_UNUSED(x) (void)(x)
 
+#ifdef PNGLE_STATIC_ALLOC
+
+#ifndef PNGLE_SCANLINE_BUF_SIZE
+#define PNGLE_SCANLINE_BUF_SIZE 2048
+#endif
+
+#ifndef PNGLE_PALETTE_BUF_SIZE
+#define PNGLE_PALETTE_BUF_SIZE 768 // 256 * 3
+#endif
+
+#ifndef PNGLE_TRANS_PALETTE_BUF_SIZE
+#define PNGLE_TRANS_PALETTE_BUF_SIZE 256
+#endif
+
+#ifndef PNGLE_GAMMA_TABLE_BUF_SIZE
+#define PNGLE_GAMMA_TABLE_BUF_SIZE 256
+#endif
+
+#define PNGLE_FREE(p) ((void)(p))
+
+#else
+
+#define PNGLE_FREE(p) free(p)
+
+#endif /* PNGLE_STATIC_ALLOC */
+
 typedef enum {
 	PNGLE_STATE_ERROR = -2,
 	PNGLE_STATE_EOF = -1,
@@ -122,6 +148,15 @@ struct _pngle_t {
 	size_t  avail_out;
 	tinfl_decompressor inflator; // 11000 bytes
 	uint8_t lz_buf[TINFL_LZ_DICT_SIZE]; // 32768 bytes
+
+#ifdef PNGLE_STATIC_ALLOC
+	uint8_t _scanline_buf[PNGLE_SCANLINE_BUF_SIZE];
+	uint8_t _palette_buf[PNGLE_PALETTE_BUF_SIZE];
+	uint8_t _trans_palette_buf[PNGLE_TRANS_PALETTE_BUF_SIZE];
+#ifndef PNGLE_NO_GAMMA_CORRECTION
+	uint8_t _gamma_table_buf[PNGLE_GAMMA_TABLE_BUF_SIZE];
+#endif
+#endif
 };
 
 const size_t PNGLE_T_SIZE = sizeof(pngle_t);
@@ -169,11 +204,11 @@ void pngle_reset(pngle_t *pngle)
 	pngle->state = PNGLE_STATE_INITIAL;
 	pngle->error = "No error";
 
-	if (pngle->scanline_ringbuf) free(pngle->scanline_ringbuf);
-	if (pngle->palette) free(pngle->palette);
-	if (pngle->trans_palette) free(pngle->trans_palette);
+	if (pngle->scanline_ringbuf) PNGLE_FREE(pngle->scanline_ringbuf);
+	if (pngle->palette) PNGLE_FREE(pngle->palette);
+	if (pngle->trans_palette) PNGLE_FREE(pngle->trans_palette);
 #ifndef PNGLE_NO_GAMMA_CORRECTION
-	if (pngle->gamma_table) free(pngle->gamma_table);
+	if (pngle->gamma_table) PNGLE_FREE(pngle->gamma_table);
 #endif
 
 	pngle->scanline_ringbuf = NULL;
@@ -194,21 +229,36 @@ void pngle_reset(pngle_t *pngle)
 	tinfl_init(&pngle->inflator);
 }
 
-pngle_t *pngle_new()
+pngle_t *pngle_init(void *buf, size_t buf_size)
 {
+#ifdef PNGLE_STATIC_ALLOC
+	if (!buf || buf_size < sizeof(pngle_t)) return NULL;
+	pngle_t *pngle = (pngle_t *)buf;
+#else
+	PNGLE_UNUSED(buf);
+	PNGLE_UNUSED(buf_size);
 	pngle_t *pngle = (pngle_t *)PNGLE_CALLOC(1, sizeof(pngle_t), "pngle_t");
 	if (!pngle) return NULL;
-
+#endif
+	memset(pngle, 0, sizeof(pngle_t));
 	pngle_reset(pngle);
-
 	return pngle;
 }
+
+#ifndef PNGLE_STATIC_ALLOC
+pngle_t *pngle_new()
+{
+	return pngle_init(NULL, 0);
+}
+#endif
 
 void pngle_destroy(pngle_t *pngle)
 {
 	if (pngle) {
 		pngle_reset(pngle);
+#ifndef PNGLE_STATIC_ALLOC
 		free(pngle);
+#endif
 	}
 }
 
@@ -398,8 +448,14 @@ static int set_interlace_pass(pngle_t *pngle, uint_fast8_t pass)
 
 	pngle->scanline_ringbuf_size = scanline_stride + bytes_per_pixel * 2; // 2 rooms for c/x and a
 
+#ifdef PNGLE_STATIC_ALLOC
+	if (pngle->scanline_ringbuf_size > PNGLE_SCANLINE_BUF_SIZE) return PNGLE_ERROR("Scanline buffer too small, increase PNGLE_SCANLINE_BUF_SIZE");
+	pngle->scanline_ringbuf = pngle->_scanline_buf;
+	memset(pngle->scanline_ringbuf, 0, pngle->scanline_ringbuf_size);
+#else
 	if (pngle->scanline_ringbuf) free(pngle->scanline_ringbuf);
 	if ((pngle->scanline_ringbuf = (uint8_t *)PNGLE_CALLOC(pngle->scanline_ringbuf_size, 1, "scanline ringbuf")) == NULL) return PNGLE_ERROR("Insufficient memory");
+#endif
 
 	pngle->drawing_x = interlace_off_x[pngle->interlace_pass];
 	pngle->drawing_y = interlace_off_y[pngle->interlace_pass];
@@ -414,15 +470,21 @@ static int set_interlace_pass(pngle_t *pngle, uint_fast8_t pass)
 static int setup_gamma_table(pngle_t *pngle, uint32_t png_gamma)
 {
 #ifndef PNGLE_NO_GAMMA_CORRECTION
-	if (pngle->gamma_table) free(pngle->gamma_table);
+	if (pngle->gamma_table) PNGLE_FREE(pngle->gamma_table);
 
 	if (pngle->display_gamma <= 0) return 0; // disable gamma correction
 	if (png_gamma == 0) return 0;
 
 	uint16_t maxval = MAXVAL(pngle);
 
+#ifdef PNGLE_STATIC_ALLOC
+	if ((size_t)(maxval + 1) > PNGLE_GAMMA_TABLE_BUF_SIZE) return PNGLE_ERROR("Gamma table too small, increase PNGLE_GAMMA_TABLE_BUF_SIZE");
+	pngle->gamma_table = pngle->_gamma_table_buf;
+	memset(pngle->gamma_table, 0, maxval + 1);
+#else
 	pngle->gamma_table = (uint8_t *)PNGLE_CALLOC(1, maxval + 1, "gamma table");
 	if (!pngle->gamma_table) return PNGLE_ERROR("Insufficient memory");
+#endif
 
 	for (int i = 0; i < maxval + 1; i++) {
 		pngle->gamma_table[i] = (uint8_t)floor(pow(i / (double)maxval, 100000.0 / png_gamma / pngle->display_gamma) * 255.0 + 0.5);
@@ -784,7 +846,13 @@ static int pngle_feed_internal(pngle_t *pngle, const uint8_t *buf, size_t len)
 
 			if (pngle->chunk_remain % 3) return PNGLE_ERROR("Invalid PLTE chunk size");
 			if (pngle->chunk_remain / 3 > MIN(256, (1UL << pngle->hdr.depth))) return PNGLE_ERROR("Too many palettes in PLTE");
+#ifdef PNGLE_STATIC_ALLOC
+			if (pngle->chunk_remain > PNGLE_PALETTE_BUF_SIZE) return PNGLE_ERROR("Palette too large, increase PNGLE_PALETTE_BUF_SIZE");
+			pngle->palette = pngle->_palette_buf;
+			memset(pngle->palette, 0, pngle->chunk_remain);
+#else
 			if ((pngle->palette = (uint8_t *)PNGLE_CALLOC(pngle->chunk_remain / 3, 3, "palette")) == NULL) return PNGLE_ERROR("Insufficient memory");
+#endif
 			pngle->n_palettes = 0;
 			break;
 
@@ -812,7 +880,13 @@ static int pngle_feed_internal(pngle_t *pngle, const uint8_t *buf, size_t len)
 			default:
 				return PNGLE_ERROR("tRNS chunk is prohibited on the color type");
 			}
+#ifdef PNGLE_STATIC_ALLOC
+			if (pngle->chunk_remain > PNGLE_TRANS_PALETTE_BUF_SIZE) return PNGLE_ERROR("Trans palette too large, increase PNGLE_TRANS_PALETTE_BUF_SIZE");
+			pngle->trans_palette = pngle->_trans_palette_buf;
+			memset(pngle->trans_palette, 0, pngle->chunk_remain);
+#else
 			if ((pngle->trans_palette = (uint8_t *)PNGLE_CALLOC(pngle->chunk_remain, 1, "trans palette")) == NULL) return PNGLE_ERROR("Insufficient memory");
+#endif
 			pngle->n_trans_palettes = 0;
 			break;
 

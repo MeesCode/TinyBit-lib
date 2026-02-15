@@ -4,6 +4,8 @@ add_library(tinybit_lib INTERFACE)
 
 target_sources(tinybit_lib INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/tinybit.c
+    ${CMAKE_CURRENT_LIST_DIR}/lua_pool.c
+    ${CMAKE_CURRENT_LIST_DIR}/cartridge.c
     ${CMAKE_CURRENT_LIST_DIR}/graphics.c
     ${CMAKE_CURRENT_LIST_DIR}/font.c
     ${CMAKE_CURRENT_LIST_DIR}/input.c
@@ -25,4 +27,10 @@ target_include_directories(tinybit_lib INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/lua
     ${CMAKE_CURRENT_LIST_DIR}/pngle
     ${CMAKE_CURRENT_LIST_DIR}/ABC-parser
+)
+
+target_compile_definitions(tinybit_lib INTERFACE
+    PNGLE_STATIC_ALLOC
+    PNGLE_NO_GAMMA_CORRECTION
+    MINIZ_NO_MALLOC
 )

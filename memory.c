@@ -6,7 +6,7 @@
 
 struct TinyBitMemory* tinybit_memory;
 
-// Initialize TinyBit memory by clearing all sections
+// Initialize TinyBit memory by clearing all sections (preserving lua_state)
 void memory_init() {
     memset(tinybit_memory, 0, TB_MEM_SIZE);
 }

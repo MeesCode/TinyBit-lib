@@ -5,22 +5,18 @@
 
 #include "input.h"
 #include "tinybit.h"
+#include "memory.h"
 
-static bool* button_state;
 bool prev_button_state[TB_BUTTON_COUNT] = {0};
-
-void init_input(bool* button_state_ptr) {
-	button_state = button_state_ptr;
-}
 
 // Check if a button is currently being pressed
 bool button_down(enum TinyBitButton b){
-	return button_state[b];
+	return tinybit_memory->button_input[b];
 }
 
 // Save the current button state for next frame comparison
 void save_button_state(){
-	memcpy(prev_button_state, button_state, sizeof(prev_button_state));
+	memcpy(prev_button_state, tinybit_memory->button_input, sizeof(prev_button_state));
 }
 
 // Check if a button is currently being held down
