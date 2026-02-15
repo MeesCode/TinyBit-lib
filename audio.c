@@ -159,7 +159,9 @@ static void advance_to_next_note(struct channel_state *ch, int voice_idx) {
     // If no next note and repeat is enabled, loop back to start
     if (!next && ch->repeat) {
         next = pool_first_note(pool);
-    }
+    } 
+
+    ch->channel_active = next != NULL; // If we have a next note, channel is active; if not, it may become inactive
 
     if (next) {
         ch->voices[voice_idx].current_note = next;
@@ -264,6 +266,11 @@ void set_bpm(int new_bpm) {
     if (new_bpm > 0) {
         bpm = new_bpm;
     }
+}
+
+bool is_channel_active(int channel_num) {
+    if (channel_num < 0 || channel_num >= NUM_CHANNELS) return false;
+    return channels[channel_num].channel_active;
 }
 
 // Load ABC notation into a specific channel

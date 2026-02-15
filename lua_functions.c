@@ -116,6 +116,8 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "music");
     lua_pushcfunction(L, lua_sfx);
     lua_setglobal(L, "sfx");
+    lua_pushcfunction(L, lua_sfx_active);
+    lua_setglobal(L, "sfx_active");
 }
 
 // Lua function to log messages to the console
@@ -455,4 +457,9 @@ int lua_sfx(lua_State* L) {
 
     audio_load_abc(1, str, SINE, false);
     return 0;
+}
+
+int lua_sfx_active(lua_State* L) {
+    lua_pushboolean(L, is_channel_active(1));
+    return 1;
 }

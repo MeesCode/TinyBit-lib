@@ -34,5 +34,6 @@ int audio_load_abc(int channel_num, const char *abc_string, WAVEFORM waveform, b
 // Channel control
 void audio_stop_channel(int channel_num);
 void audio_stop_all();
+bool is_channel_active(int channel_num);
 
 #endif

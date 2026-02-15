@@ -35,5 +35,6 @@ int lua_poly_clear(lua_State* L);
 int poly(lua_State* L);
 int lua_music(lua_State* L);
 int lua_sfx(lua_State* L);
+int lua_sfx_active(lua_State* L);
 
 #endif
