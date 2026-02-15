@@ -29,7 +29,6 @@
 #define TB_MEM_AUDIO_DATA_SIZE      (12 * 1024) // 12Kb
 #define TB_MEM_PNGLE_SIZE           (48 * 1024) // 48Kb
 #define TB_MEM_AUDIO_BUFFER_SIZE    (TB_AUDIO_FRAME_SAMPLES * 2) // 734 bytes (367 16-bit samples)
-#define TB_MEM_BUTTON_INPUT         (TB_MEM_AUDIO_BUFFER_START + TB_MEM_AUDIO_BUFFER_SIZE)
 #define TB_MEM_BUTTON_INPUT_SIZE    8 // 8 bytes (button inputs)
 #define TB_MEM_USER_SIZE            (10 * 1024) // 10Kb
 
