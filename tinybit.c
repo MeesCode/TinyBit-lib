@@ -38,6 +38,7 @@ void tinybit_init(struct TinyBitMemory* memory) {
     tinybit_memory = memory;
 
     // initialize memory
+    srand(time(NULL));
     memory_init();
     tb_audio_init();
     cartridge_init();
@@ -49,25 +50,52 @@ void tinybit_init(struct TinyBitMemory* memory) {
     cartridge_register_lua(L);
 
     // initialize the game loader as the default "game"
-    const char* s =
-        "counter = 0\n"
-        "game_counter = gamecount()\n"
-        "log(\"files found: \" .. game_counter)\n"
-        "gamecover(0)\n"
+    // const char* s =
+    //     "angle = 0\n"
+    //     "counter = 0\n"
+    //     "game_counter = gamecount()\n"
+    //     "log(\"files found: \" .. game_counter)\n"
+    //     "gamecover(0)\n"
+    //     "function _draw()\n"
+    //     "    angle = angle + 0.05\n"
+    //     "    angle_deg = math.sin(angle) * 5\n"
+    //     "    -- draw the spritesheet\n"
+    //     "    cls()\n"
+    //     "    sprite(0,0,128,128,5,5,118,118, angle_deg)\n"
+    //     "    if btnp(LEFT) then\n"
+    //     "        counter = (counter + 1) % game_counter\n"
+    //     "        gamecover(counter % game_counter)\n"
+    //     "    end\n"
+    //     "    if btnp(RIGHT) then\n"
+    //     "        counter = (counter - 1) % game_counter\n"
+    //     "        gamecover(counter % game_counter)\n"
+    //     "    end\n"
+    //     "    if btnp(A) then\n"
+    //     "        gameload(counter)\n"
+    //     "    end\n"
+    //     "end\n";
+
+    const char s[] =
+        "colors = {}\n"
+        "x = 0\n"
+        "dx = 0\n"
+        "fill(0, 0, 0, 0)\n"
+        "for i=1, 128 do\n"
+        "   colors[i] = {random(0,255), random(0,255), random(0,255), random(0,50)}\n"
+        "end\n"
         "function _draw()\n"
-        "    -- draw the spritesheet\n"
-        "    sprite(0,0,128,128,14,14,100,100)\n"
-        "    if btnp(LEFT) then\n"
-        "        counter = (counter + 1) % game_counter\n"
-        "        gamecover(counter % game_counter)\n"
-        "    end\n"
-        "    if btnp(RIGHT) then\n"
-        "        counter = (counter - 1) % game_counter\n"
-        "        gamecover(counter % game_counter)\n"
-        "    end\n"
-        "    if btnp(A) then\n"
-        "        gameload(counter)\n"
-        "    end\n"
+        "   cls()\n"
+        "   if x > 120 then\n"
+        "       text(255, 255, 255, 255)\n"
+        "       cursor(50, 64)\n"
+        "       print(\"TINYBIT\")\n"
+        "   end\n"
+        "   dx = dx + 0.10\n"
+        "   x = x + dx\n"
+        "   for i=1, 128 do\n"
+        "       stroke(1, colors[i][1], colors[i][2], colors[i][3], 255)\n"
+        "       line(128 + colors[i][4] - x, i, 450 - i - x, i)\n"
+        "   end\n"
         "end\n";
 
     memcpy(tinybit_memory->script, s, strlen(s) + 1); // copy script to memory
