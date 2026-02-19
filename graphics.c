@@ -89,7 +89,7 @@ int random_range(int min, int max) {
 }
 
 // Draw a sprite from spritesheet to display with scaling and clipping
-void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH) {
+void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, TARGET target) {
     int clipStartX = targetX < 0 ? -targetX : 0;
     int clipStartY = targetY < 0 ? -targetY : 0;
     int clipEndX = (targetX + targetW > TB_SCREEN_WIDTH) ? TB_SCREEN_WIDTH - targetX : targetW;
@@ -104,7 +104,12 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
 
     for (int y = clipStartY; y < clipEndY; ++y) {
         int sourcePixelY = sourceY + ((y * scale_y_fixed_point) >> 16);
-        uint8_t* src_row = &tinybit_memory->spritesheet[sourcePixelY * TB_SCREEN_WIDTH * 2];
+        uint8_t* src_row;
+        if(target == TARGET_SPRITESHEET) {
+            src_row = &tinybit_memory->spritesheet[sourcePixelY * TB_SCREEN_WIDTH * 2];
+        } else {
+            src_row = &tinybit_memory->display[sourcePixelY * TB_SCREEN_WIDTH * 2];
+        }
 
         for (int x = clipStartX; x < clipEndX; ++x) {
             int sourcePixelX = sourceX + ((x * scale_x_fixed_point) >> 16);
@@ -287,7 +292,7 @@ void draw_line(int x1, int y1, int x2, int y2) {
 }
 
 // Draw a rotated sprite from spritesheet to display with scaling and clipping
-void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees) {
+void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees, TARGET target) {
     int cosA = fast_cos(angleDegrees);
     int sinA = fast_sin(angleDegrees);
 
@@ -334,7 +339,12 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
                 if (sourcePixelX >= sourceX && sourcePixelX < sourceX + sourceW &&
                     sourcePixelY >= sourceY && sourcePixelY < sourceY + sourceH) {
 
-                    uint8_t* src = &tinybit_memory->spritesheet[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
+                    uint8_t* src;
+                    if(target == TARGET_SPRITESHEET) {
+                        src = &tinybit_memory->spritesheet[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
+                    } else {
+                        src = &tinybit_memory->display[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
+                    }
                     uint8_t* dst = &tinybit_memory->display[(screenY * TB_SCREEN_WIDTH + screenX) * 2];
                     blend(dst, src, dst);
                 }
