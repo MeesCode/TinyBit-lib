@@ -111,6 +111,7 @@ bool cartridge_load_pending(void) {
     pngle_reset(pngle);
     pngle_set_draw_callback(pngle, decode_pixel_load_game);
     gameload_func(index);
+    tinybit_restart();
     return true;
 }
 

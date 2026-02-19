@@ -129,12 +129,6 @@ void tinybit_init(struct TinyBitMemory* memory) {
     memcpy(tinybit_memory->script, s, strlen(s) + 1); // copy script to memory
 }
 
-// Close and recreate the Lua state from scratch
-static void tinybit_reset_lua(void) {
-    lua_close(L);
-    L = lua_pool_newstate();
-}
-
 // Start executing the Lua script currently loaded in memory
 bool tinybit_start(){
     // load lua file
@@ -146,6 +140,13 @@ bool tinybit_start(){
         lua_pop(L, lua_gettop(L)); // pop error message
         return false; // runtime error in lua code
     }
+}
+
+// Reset the Lua state and start a new game
+bool tinybit_restart(){
+    lua_close(L);
+    L = lua_pool_newstate();
+    return tinybit_start();
 }
 
 // Signal the emulation loop to quit
@@ -190,12 +191,11 @@ void tinybit_loop() {
         return; // runtime error in lua code
     }
 
-    // deferred game load - reset lua state and start new game
+    // deferred game load
     if (cartridge_load_pending()) {
-        tinybit_reset_lua();
-        tinybit_start();
         return;
     }
+
     render_time = get_ticks_ms_func() - start_time;
     start_time += render_time;
 
