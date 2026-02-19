@@ -38,6 +38,7 @@ void tinybit_init(struct TinyBitMemory* memory) {
     tinybit_memory = memory;
 
     // initialize memory
+    srand(time(NULL));
     memory_init();
     tb_audio_init();
     cartridge_init();
@@ -50,23 +51,85 @@ void tinybit_init(struct TinyBitMemory* memory) {
 
     // initialize the game loader as the default "game"
     const char* s =
+        "colors = {}\n"
+        "x = 0\n"
+        "dx = 0.1\n"
+        "fill(0, 0, 0, 0)\n"
+        "state = 'intro'\n"
+        "intro_tune = [[\n"
+        "   X:1\n"
+        "   L:1/4\n"
+        "   Q:1/4=200\n"
+        "   K:C\n"
+        "   V:SINE\n"
+        "   z2 d B/G/ [G3d3g3]\n"
+        "   V:SAW\n"
+        "   z4 G,,3\n"
+        "]]\n"
+        "for i=1, 128 do\n"
+        "   colors[i] = {random(0,255), random(0,255), random(0,255), random(0,50)}\n"
+        "end\n"
         "counter = 0\n"
         "game_counter = gamecount()\n"
         "log(\"files found: \" .. game_counter)\n"
         "gamecover(0)\n"
+        "sfx(intro_tune)\n"
         "function _draw()\n"
-        "    -- draw the spritesheet\n"
-        "    sprite(0,0,128,128,14,14,100,100)\n"
-        "    if btnp(LEFT) then\n"
-        "        counter = (counter + 1) % game_counter\n"
-        "        gamecover(counter % game_counter)\n"
+        "    if state == 'intro' then\n"
+        "        cls()\n"
+        "        if x > 120 then\n"
+        "            text(255, 255, 255, 255)\n"
+        "            cursor(50, 64)\n"
+        "            print(\"TINYBIT\")\n"
+        "        end\n"
+        "        dx = dx * 1.06\n"
+        "        x = x + dx\n"
+        "        for i=1, 128 do\n"
+        "            stroke(1, colors[i][1], colors[i][2], colors[i][3], 255)\n"
+        "            line(128 + colors[i][4] - x, i, 450 - i - x, i)\n"
+        "        end\n"
+        "        if(millis() > 3000) then\n"
+        "            state = 'slide_left'\n"
+        "            x = 0\n"
+        "            dx = 0.1\n"
+        "        end\n"
         "    end\n"
-        "    if btnp(RIGHT) then\n"
-        "        counter = (counter - 1) % game_counter\n"
-        "        gamecover(counter % game_counter)\n"
+        "    if state == 'game_select' then\n"
+        "       if btnp(LEFT) then\n"
+        "           counter = (counter + 1) % game_counter\n"
+        "           gamecover(counter % game_counter)\n"
+        "           state = 'slide_left'\n"
+        "           x = 0\n"
+        "           dx = 0.5\n"
+        "       end\n"
+        "       if btnp(RIGHT) then\n"
+        "           counter = (counter - 1) % game_counter\n"
+        "           gamecover(counter % game_counter)\n"
+        "           state = 'slide_right'\n"
+        "           x = 0\n"
+        "           dx = 0.5\n"
+        "       end\n"
+        "       if btnp(A) then\n"
+        "           gameload(counter)\n"
+        "       end\n"
         "    end\n"
-        "    if btnp(A) then\n"
-        "        gameload(counter)\n"
+        "    if state == 'slide_left' then\n"
+        "       dx = dx * 1.2\n"
+        "       x = x + dx\n"
+        "       if x >= 128 then\n"
+        "           state = 'game_select'\n"
+        "           x = 128\n"
+        "       end\n"
+        "       sprite(0, 0, 128, 128, 128-x, 0, 128, 128)\n"
+        "    end\n"
+        "    if state == 'slide_right' then\n"
+        "       dx = dx * 1.2\n"
+        "       x = x + dx\n"
+        "       if x >= 128 then\n"
+        "           state = 'game_select'\n"
+        "           x = 128\n"
+        "       end\n"
+        "       sprite(0, 0, 128, 128, -128+x, 0, 128, 128)\n"
         "    end\n"
         "end\n";
 
@@ -84,6 +147,13 @@ bool tinybit_start(){
         lua_pop(L, lua_gettop(L)); // pop error message
         return false; // runtime error in lua code
     }
+}
+
+// Reset the Lua state and start a new game
+bool tinybit_restart(){
+    lua_close(L);
+    L = lua_pool_newstate();
+    return tinybit_start();
 }
 
 // Signal the emulation loop to quit
@@ -127,6 +197,12 @@ void tinybit_loop() {
         printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
         return; // runtime error in lua code
     }
+
+    // deferred game load
+    if (cartridge_load_pending()) {
+        return;
+    }
+
     render_time = get_ticks_ms_func() - start_time;
     start_time += render_time;
 

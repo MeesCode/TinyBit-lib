@@ -62,6 +62,7 @@ enum TinyBitButton {
 void tinybit_init(struct TinyBitMemory* memory);
 bool tinybit_feed_cartridge(const uint8_t* cartridge_buffer, size_t bytes);
 bool tinybit_start();
+bool tinybit_restart();
 void tinybit_loop();
 void tinybit_stop();
 

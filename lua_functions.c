@@ -70,6 +70,8 @@ void lua_setup(lua_State* L) {
 
     lua_pushcfunction(L, lua_sprite);
     lua_setglobal(L, "sprite");
+    lua_pushcfunction(L, lua_copy_disp);
+    lua_setglobal(L, "duplicate");
     lua_pushcfunction(L, lua_line);
     lua_setglobal(L, "line");
     lua_pushcfunction(L, lua_millis);
@@ -191,8 +193,7 @@ int lua_line(lua_State* L) {
     return 0;
 }
 
-// Lua function to draw a sprite (with optional rotation)
-int lua_sprite(lua_State* L) {
+int lua_sprite_copy(lua_State* L, TARGET target) {
     if (lua_gettop(L) != 8 && lua_gettop(L) != 9) {
         return 0;
     }
@@ -208,14 +209,23 @@ int lua_sprite(lua_State* L) {
     int targetH = (int)luaL_checknumber(L, 8);
 
     if(lua_gettop(L) == 8) {
-        draw_sprite(sourceX, sourceY, sourceW, sourceH, targetX, targetY, targetW, targetH);
+        draw_sprite(sourceX, sourceY, sourceW, sourceH, targetX, targetY, targetW, targetH, target);
         return 0;
     }
 
     int targetR = (int)luaL_checknumber(L, 9);
 
-    draw_sprite_rotated(sourceX, sourceY, sourceW, sourceH, targetX, targetY, targetW, targetH, targetR);
+    draw_sprite_rotated(sourceX, sourceY, sourceW, sourceH, targetX, targetY, targetW, targetH, targetR, target);
     return 0;
+}
+
+// Lua function to draw a sprite (with optional rotation)
+int lua_sprite(lua_State* L) {
+    return lua_sprite_copy(L, TARGET_SPRITESHEET);
+}
+
+int lua_copy_disp(lua_State* L) {
+    return lua_sprite_copy(L, TARGET_DISPLAY);
 }
 
 // Lua function to get current frame time in milliseconds

@@ -15,6 +15,7 @@ void (*gameload_func)(int index);
 
 static size_t cartridge_index = 0;
 static pngle_t *pngle;
+static int pending_gameload = -1;
 
 // Decode PNG pixel data and load game assets (spritesheet and script) into memory
 static void decode_pixel_load_game(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4])
@@ -95,23 +96,23 @@ static int lua_gameload(lua_State* L) {
         return lua_error(L);
     }
 
+    pending_gameload = luaL_checkinteger(L, 1);
+    return 0;
+}
+
+bool cartridge_load_pending(void) {
+    if (pending_gameload < 0) {
+        return false;
+    }
+
+    int index = pending_gameload;
+    pending_gameload = -1;
+
     pngle_reset(pngle);
     pngle_set_draw_callback(pngle, decode_pixel_load_game);
-
-    int index = luaL_checkinteger(L, 1);
     gameload_func(index);
-
-    // restart game
-    lua_pushnil(L);
-    lua_setglobal(L, "gamecount");
-    lua_pushnil(L);
-    lua_setglobal(L, "gamecover");
-    lua_pushnil(L);
-    lua_setglobal(L, "gameload");
-
-    tinybit_start();
-
-    return 0;
+    tinybit_restart();
+    return true;
 }
 
 void cartridge_init(void) {

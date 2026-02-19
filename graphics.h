@@ -7,6 +7,12 @@ struct Color{
     uint8_t r, g, b, a;
 };
 
+typedef enum {
+	TARGET_MEMORY,
+    TARGET_DISPLAY,
+    TARGET_SPRITESHEET
+} TARGET;
+
 extern uint8_t fillColor[2];
 extern uint8_t strokeColor[2];
 
@@ -14,8 +20,8 @@ extern int strokeWidth;
 
 // Graphics function declarations
 int random_range(int, int);
-void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH);
-void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees);
+void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, TARGET target);
+void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees, TARGET target);
 void draw_rect(int x, int y, int w, int h);
 void draw_oval(int x, int y, int w, int h);
 void set_stroke(int width, int r, int g, int b, int a);
