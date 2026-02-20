@@ -111,12 +111,20 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
 
     for (int y = clipStartY; y < clipEndY; ++y) {
         int sourcePixelY = sourceY + ((y * scale_y_fixed_point) >> 16);
+
+        if (sourcePixelY < 0 || sourcePixelY >= TB_SCREEN_HEIGHT) {
+            dst += TB_SCREEN_WIDTH * 2;
+            continue;
+        }
+
         uint8_t* src_row = &src_buf[sourcePixelY * TB_SCREEN_WIDTH * 2];
 
         for (int x = clipStartX; x < clipEndX; ++x) {
             int sourcePixelX = sourceX + ((x * scale_x_fixed_point) >> 16);
-            uint8_t* src_pixel = src_row + sourcePixelX * 2;
-            blend(dst, src_pixel, dst);
+            if (sourcePixelX >= 0 && sourcePixelX < TB_SCREEN_WIDTH) {
+                uint8_t* src_pixel = src_row + sourcePixelX * 2;
+                blend(dst, src_pixel, dst);
+            }
             dst += 2;
         }
         dst += (TB_SCREEN_WIDTH - (clipEndX - clipStartX)) * 2;
@@ -175,8 +183,8 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
                 int sourcePixelX = sourceX + ((rotX * scale_x_fixed_point) >> 16);
                 int sourcePixelY = sourceY + ((rotY * scale_y_fixed_point) >> 16);
 
-                if (sourcePixelX >= sourceX && sourcePixelX < sourceX + sourceW &&
-                    sourcePixelY >= sourceY && sourcePixelY < sourceY + sourceH) {
+                if (sourcePixelX >= 0 && sourcePixelX < TB_SCREEN_WIDTH &&
+                    sourcePixelY >= 0 && sourcePixelY < TB_SCREEN_HEIGHT) {
 
                     uint8_t* src = &src_buf[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
                     uint8_t* dst = &tinybit_memory->display[(screenY * TB_SCREEN_WIDTH + screenX) * 2];
