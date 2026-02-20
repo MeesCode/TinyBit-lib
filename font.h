@@ -10,6 +10,6 @@ extern char characters[16 * 8];
 // Font function declarations
 void font_cursor(int, int);
 void font_print(const char*);
-void font_text_color(int r, int g, int b, int a);
+void font_text_color(uint16_t color);
 
 #endif

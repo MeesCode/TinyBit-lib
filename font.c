@@ -25,8 +25,8 @@ char characters[16 * 8] = {
 };
 
 // Set the text color for font rendering
-void font_text_color(int r, int g, int b, int a) {
-	textColor = pack_color(r, g, b, a);
+void font_text_color(uint16_t color) {
+	textColor = color;
 }
 
 // Set the cursor position for text rendering

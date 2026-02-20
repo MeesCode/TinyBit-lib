@@ -32,8 +32,8 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
 void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees, TARGET target);
 void draw_rect(int x, int y, int w, int h);
 void draw_oval(int x, int y, int w, int h);
-void set_stroke(int width, int r, int g, int b, int a);
-void set_fill(int r, int g, int b, int a);
+void set_stroke(int width, uint16_t color);
+void set_fill(uint16_t color);
 void draw_pixel(int x, int y);
 void draw_line(int x1, int y1, int x2, int y2);
 void draw_cls();

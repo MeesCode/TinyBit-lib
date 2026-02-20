@@ -286,14 +286,14 @@ void draw_oval(int x, int y, int w, int h) {
 }
 
 // Set stroke color and width for drawing operations
-void set_stroke(int width, int r, int g, int b, int a) {
+void set_stroke(int width, uint16_t color) {
     strokeWidth = width >= 0 ? width : 0;
-    strokeColor = pack_color(r, g, b, a);
+    strokeColor = color;
 }
 
 // Set fill color for drawing operations
-void set_fill(int r, int g, int b, int a) {
-    fillColor = pack_color(r, g, b, a);
+void set_fill(uint16_t color) {
+    fillColor = color;
 }
 
 // Draw a single pixel at specified coordinates

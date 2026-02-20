@@ -120,6 +120,14 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "sfx");
     lua_pushcfunction(L, lua_sfx_active);
     lua_setglobal(L, "sfx_active");
+    lua_pushcfunction(L, lua_rgba);
+    lua_setglobal(L, "rgba");
+    lua_pushcfunction(L, lua_rgb);
+    lua_setglobal(L, "rgb");
+    lua_pushcfunction(L, lua_hsb);
+    lua_setglobal(L, "hsb");
+    lua_pushcfunction(L, lua_hsba);
+    lua_setglobal(L, "hsba");
 }
 
 // Lua function to log messages to the console
@@ -249,51 +257,122 @@ int lua_random(lua_State* L) {
     return 1;
 }
 
-// Lua function to set stroke color and width
+// Convert RGBA8888 uint32_t to internal RGBA4444 uint16_t
+static uint16_t rgba8888_to_4444(uint32_t color) {
+    int r = (color >> 24) & 0xFF;
+    int g = (color >> 16) & 0xFF;
+    int b = (color >> 8) & 0xFF;
+    int a = color & 0xFF;
+    return pack_color(r, g, b, a);
+}
+
+// Lua function: stroke(width, color) - set stroke width and color
 int lua_stroke(lua_State* L) {
-    if (lua_gettop(L) != 5) {
+    if (lua_gettop(L) != 2) {
         return 0;
     }
 
     int width = (int)luaL_checknumber(L, 1);
-    int r = (int)luaL_checknumber(L, 2);
-    int g = (int)luaL_checknumber(L, 3);
-    int b = (int)luaL_checknumber(L, 4);
-    int a = (int)luaL_checknumber(L, 5);
+    uint32_t color = (uint32_t)luaL_checknumber(L, 2);
 
-    set_stroke(width, r, g, b, a);
+    set_stroke(width, rgba8888_to_4444(color));
     return 0;
 }
 
-// Lua function to set fill color
+// Lua function: fill(color) - set fill color
 int lua_fill(lua_State* L) {
-    if (lua_gettop(L) != 4 && lua_gettop(L) != 8) {
+    if (lua_gettop(L) != 1) {
         return 0;
     }
 
-    int r = (int)luaL_checknumber(L, 1);
-    int g = (int)luaL_checknumber(L, 2);
-    int b = (int)luaL_checknumber(L, 3);
-    int a = (int)luaL_checknumber(L, 4);
-    
-    set_fill(r, g, b, a);
-
+    uint32_t color = (uint32_t)luaL_checknumber(L, 1);
+    set_fill(rgba8888_to_4444(color));
     return 0;
 }
 
-// Lua function to set text color
+// Lua function: text(color) - set text color
 int lua_text(lua_State* L) {
-    if (lua_gettop(L) != 4) {
+    if (lua_gettop(L) != 1) {
         return 0;
     }
 
-    int r = (int)luaL_checknumber(L, 1);
-    int g = (int)luaL_checknumber(L, 2);
-    int b = (int)luaL_checknumber(L, 3);
-    int a = (int)luaL_checknumber(L, 4);
-
-    font_text_color(r, g, b, a);
+    uint32_t color = (uint32_t)luaL_checknumber(L, 1);
+    font_text_color(rgba8888_to_4444(color));
     return 0;
+}
+
+// Lua function: rgba(r, g, b, a) - pack into RGBA8888
+int lua_rgba(lua_State* L) {
+    int r = (int)luaL_checknumber(L, 1) & 0xFF;
+    int g = (int)luaL_checknumber(L, 2) & 0xFF;
+    int b = (int)luaL_checknumber(L, 3) & 0xFF;
+    int a = (int)luaL_checknumber(L, 4) & 0xFF;
+    uint32_t color = ((uint32_t)r << 24) | ((uint32_t)g << 16) | ((uint32_t)b << 8) | (uint32_t)a;
+    lua_pushnumber(L, color);
+    return 1;
+}
+
+// Lua function: rgb(r, g, b) - pack into RGBA8888 with alpha=255
+int lua_rgb(lua_State* L) {
+    int r = (int)luaL_checknumber(L, 1) & 0xFF;
+    int g = (int)luaL_checknumber(L, 2) & 0xFF;
+    int b = (int)luaL_checknumber(L, 3) & 0xFF;
+    uint32_t color = ((uint32_t)r << 24) | ((uint32_t)g << 16) | ((uint32_t)b << 8) | 0xFF;
+    lua_pushnumber(L, color);
+    return 1;
+}
+
+// Helper: convert HSB (all 0-255) to RGB (0-255)
+static void hsb_to_rgb(float h, float s, float b, int* r, int* g, int* bl) {
+    h = h * 360.0f / 255.0f;
+    s /= 255.0f;
+    b /= 255.0f;
+
+    float c = b * s;
+    float hh = h / 60.0;
+    float rem = hh - (int)(hh / 2.0) * 2.0;
+    float diff = rem - 1.0;
+    float x = c * (1.0 - (diff < 0 ? -diff : diff));
+    float m = b - c;
+
+    float rr, gg, bb;
+    if (h < 60)       { rr = c; gg = x; bb = 0; }
+    else if (h < 120) { rr = x; gg = c; bb = 0; }
+    else if (h < 180) { rr = 0; gg = c; bb = x; }
+    else if (h < 240) { rr = 0; gg = x; bb = c; }
+    else if (h < 300) { rr = x; gg = 0; bb = c; }
+    else              { rr = c; gg = 0; bb = x; }
+
+    *r = (int)((rr + m) * 255.0 + 0.5);
+    *g = (int)((gg + m) * 255.0 + 0.5);
+    *bl = (int)((bb + m) * 255.0 + 0.5);
+}
+
+// Lua function: hsba(h, s, b, a) - convert HSB + alpha to RGBA8888
+int lua_hsba(lua_State* L) {
+    float h = luaL_checknumber(L, 1);
+    float s = luaL_checknumber(L, 2);
+    float b = luaL_checknumber(L, 3);
+    int a = (int)luaL_checknumber(L, 4) & 0xFF;
+
+    int r, g, bl;
+    hsb_to_rgb(h, s, b, &r, &g, &bl);
+    uint32_t color = ((uint32_t)(r & 0xFF) << 24) | ((uint32_t)(g & 0xFF) << 16) | ((uint32_t)(bl & 0xFF) << 8) | (uint32_t)a;
+    lua_pushnumber(L, color);
+    return 1;
+}
+
+// Lua function: hsb(h, s, b) - convert HSB to RGBA8888 with alpha=255
+int lua_hsb(lua_State* L) {
+    float h = luaL_checknumber(L, 1);
+    float s = luaL_checknumber(L, 2);
+    float b = luaL_checknumber(L, 3);
+
+    int r, g, bl;
+    hsb_to_rgb(h, s, b, &r, &g, &bl);
+    uint32_t color = ((uint32_t)(r & 0xFF) << 24) | ((uint32_t)(g & 0xFF) << 16) | ((uint32_t)(bl & 0xFF) << 8) | 0xFF;
+    lua_pushnumber(L, color);
+    return 1;
 }
 
 // Lua function to draw a rectangle
