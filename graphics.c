@@ -90,6 +90,13 @@ int random_range(int min, int max) {
 
 // Draw a sprite from spritesheet to display with scaling and clipping
 void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, TARGET target) {
+    uint8_t* src_buf;
+    if(target == TARGET_SPRITESHEET) {
+        src_buf = tinybit_memory->spritesheet;
+    } else {
+        src_buf = tinybit_memory->display;
+    }
+
     int clipStartX = targetX < 0 ? -targetX : 0;
     int clipStartY = targetY < 0 ? -targetY : 0;
     int clipEndX = (targetX + targetW > TB_SCREEN_WIDTH) ? TB_SCREEN_WIDTH - targetX : targetW;
@@ -104,12 +111,7 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
 
     for (int y = clipStartY; y < clipEndY; ++y) {
         int sourcePixelY = sourceY + ((y * scale_y_fixed_point) >> 16);
-        uint8_t* src_row;
-        if(target == TARGET_SPRITESHEET) {
-            src_row = &tinybit_memory->spritesheet[sourcePixelY * TB_SCREEN_WIDTH * 2];
-        } else {
-            src_row = &tinybit_memory->display[sourcePixelY * TB_SCREEN_WIDTH * 2];
-        }
+        uint8_t* src_row = &src_buf[sourcePixelY * TB_SCREEN_WIDTH * 2];
 
         for (int x = clipStartX; x < clipEndX; ++x) {
             int sourcePixelX = sourceX + ((x * scale_x_fixed_point) >> 16);
@@ -118,6 +120,70 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
             dst += 2;
         }
         dst += (TB_SCREEN_WIDTH - (clipEndX - clipStartX)) * 2;
+    }
+}
+
+// Draw a rotated sprite from spritesheet to display with scaling and clipping
+void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees, TARGET target) {
+    uint8_t* src_buf;
+    if(target == TARGET_SPRITESHEET) {
+        src_buf = tinybit_memory->spritesheet;
+    } else {
+        src_buf = tinybit_memory->display;
+    }
+
+    int cosA = fast_cos(angleDegrees);
+    int sinA = fast_sin(angleDegrees);
+
+    int centerX = targetW >> 1;
+    int centerY = targetH >> 1;
+
+    // Calculate expanded bounds for rotated sprite to prevent clipping
+    int absCosSin = (abs(cosA) + abs(sinA)) >> 16;
+    if (absCosSin == 0) absCosSin = 1;
+    
+    int expandedW = (targetW * absCosSin) + targetW;
+    int expandedH = (targetH * absCosSin) + targetH;
+    
+    int expandX = (expandedW - targetW) >> 1;
+    int expandY = (expandedH - targetH) >> 1;
+
+    int clipStartX = (targetX - expandX) < 0 ? -(targetX - expandX) : 0;
+    int clipStartY = (targetY - expandY) < 0 ? -(targetY - expandY) : 0;
+    int clipEndX = (targetX - expandX + expandedW > TB_SCREEN_WIDTH) ? TB_SCREEN_WIDTH - (targetX - expandX) : expandedW;
+    int clipEndY = (targetY - expandY + expandedH > TB_SCREEN_HEIGHT) ? TB_SCREEN_HEIGHT - (targetY - expandY) : expandedH;
+
+    if (clipStartX >= clipEndX || clipStartY >= clipEndY) return;
+
+    int scale_x_fixed_point = (sourceW << 16) / targetW;
+    int scale_y_fixed_point = (sourceH << 16) / targetH;
+
+    for (int y = clipStartY; y < clipEndY; ++y) {
+        for (int x = clipStartX; x < clipEndX; ++x) {
+            int screenX = targetX - expandX + x;
+            int screenY = targetY - expandY + y;
+            
+            if (screenX < 0 || screenX >= TB_SCREEN_WIDTH || screenY < 0 || screenY >= TB_SCREEN_HEIGHT) continue;
+
+            int relX = x - expandX - centerX;
+            int relY = y - expandY - centerY;
+
+            int rotX = ((relX * cosA + relY * sinA) >> 16) + centerX;
+            int rotY = ((-relX * sinA + relY * cosA) >> 16) + centerY;
+
+            if (rotX >= 0 && rotX < targetW && rotY >= 0 && rotY < targetH) {
+                int sourcePixelX = sourceX + ((rotX * scale_x_fixed_point) >> 16);
+                int sourcePixelY = sourceY + ((rotY * scale_y_fixed_point) >> 16);
+
+                if (sourcePixelX >= sourceX && sourcePixelX < sourceX + sourceW &&
+                    sourcePixelY >= sourceY && sourcePixelY < sourceY + sourceH) {
+
+                    uint8_t* src = &src_buf[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
+                    uint8_t* dst = &tinybit_memory->display[(screenY * TB_SCREEN_WIDTH + screenX) * 2];
+                    blend(dst, src, dst);
+                }
+            }
+        }
     }
 }
 
@@ -287,68 +353,6 @@ void draw_line(int x1, int y1, int x2, int y2) {
         if (e2 < dx) {
             err += dx;
             y += sy;
-        }
-    }
-}
-
-// Draw a rotated sprite from spritesheet to display with scaling and clipping
-void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees, TARGET target) {
-    int cosA = fast_cos(angleDegrees);
-    int sinA = fast_sin(angleDegrees);
-
-    int centerX = targetW >> 1;
-    int centerY = targetH >> 1;
-
-    // Calculate expanded bounds for rotated sprite to prevent clipping
-    int absCosSin = (abs(cosA) + abs(sinA)) >> 16;
-    if (absCosSin == 0) absCosSin = 1;
-    
-    int expandedW = (targetW * absCosSin) + targetW;
-    int expandedH = (targetH * absCosSin) + targetH;
-    
-    int expandX = (expandedW - targetW) >> 1;
-    int expandY = (expandedH - targetH) >> 1;
-
-    int clipStartX = (targetX - expandX) < 0 ? -(targetX - expandX) : 0;
-    int clipStartY = (targetY - expandY) < 0 ? -(targetY - expandY) : 0;
-    int clipEndX = (targetX - expandX + expandedW > TB_SCREEN_WIDTH) ? TB_SCREEN_WIDTH - (targetX - expandX) : expandedW;
-    int clipEndY = (targetY - expandY + expandedH > TB_SCREEN_HEIGHT) ? TB_SCREEN_HEIGHT - (targetY - expandY) : expandedH;
-
-    if (clipStartX >= clipEndX || clipStartY >= clipEndY) return;
-
-    int scale_x_fixed_point = (sourceW << 16) / targetW;
-    int scale_y_fixed_point = (sourceH << 16) / targetH;
-
-    for (int y = clipStartY; y < clipEndY; ++y) {
-        for (int x = clipStartX; x < clipEndX; ++x) {
-            int screenX = targetX - expandX + x;
-            int screenY = targetY - expandY + y;
-            
-            if (screenX < 0 || screenX >= TB_SCREEN_WIDTH || screenY < 0 || screenY >= TB_SCREEN_HEIGHT) continue;
-
-            int relX = x - expandX - centerX;
-            int relY = y - expandY - centerY;
-
-            int rotX = ((relX * cosA + relY * sinA) >> 16) + centerX;
-            int rotY = ((-relX * sinA + relY * cosA) >> 16) + centerY;
-
-            if (rotX >= 0 && rotX < targetW && rotY >= 0 && rotY < targetH) {
-                int sourcePixelX = sourceX + ((rotX * scale_x_fixed_point) >> 16);
-                int sourcePixelY = sourceY + ((rotY * scale_y_fixed_point) >> 16);
-
-                if (sourcePixelX >= sourceX && sourcePixelX < sourceX + sourceW &&
-                    sourcePixelY >= sourceY && sourcePixelY < sourceY + sourceH) {
-
-                    uint8_t* src;
-                    if(target == TARGET_SPRITESHEET) {
-                        src = &tinybit_memory->spritesheet[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
-                    } else {
-                        src = &tinybit_memory->display[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
-                    }
-                    uint8_t* dst = &tinybit_memory->display[(screenY * TB_SCREEN_WIDTH + screenX) * 2];
-                    blend(dst, src, dst);
-                }
-            }
         }
     }
 }
