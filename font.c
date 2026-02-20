@@ -11,7 +11,7 @@ int cursorX = 0;
 int cursorY = 0;
 const int fontWidth = 4;
 const int fontHeight = 6;
-uint8_t textColor[2];
+uint16_t textColor = 0;
 
 char characters[16 * 8] = {
 	'?', '"', '%', '\'', '(', ')', '*', '+', ',', '-', '.', '/', '!',  ' ', ' ', ' ',
@@ -26,8 +26,7 @@ char characters[16 * 8] = {
 
 // Set the text color for font rendering
 void font_text_color(int r, int g, int b, int a) {
-	textColor[0] = (r & 0xF0) | ((g >> 4) & 0x0F);
-	textColor[1] = (b & 0xF0) | ((a >> 4) & 0x0F);
+	textColor = pack_color(r, g, b, a);
 }
 
 // Set the cursor position for text rendering
@@ -78,13 +77,13 @@ void font_print(const char* str) {
 					if (byteIndex >= 0 && byteIndex < sizeof(basic_font)) {
 						int bitPosition = 7 - x;
 						uint8_t font_byte = basic_font[byteIndex];
-						uint8_t* pixel = &tinybit_memory->display[(py * TB_SCREEN_WIDTH + px) * 2];
-						
+						uint16_t* pixel = &tinybit_memory->display[py * TB_SCREEN_WIDTH + px];
+
 						if ((font_byte >> bitPosition) & 1) {
-							blend(pixel, textColor, pixel);
+							blend(pixel, textColor);
 						}
 						else {
-							blend(pixel, fillColor, pixel);
+							blend(pixel, fillColor);
 						}
 					}
 				}

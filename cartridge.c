@@ -24,15 +24,18 @@ static void decode_pixel_load_game(pngle_t *pngle, uint32_t x, uint32_t y, uint3
         return;
     }
 
-    // spritesheet data
-    if (cartridge_index < TB_MEM_SPRITESHEET_SIZE) {
-        tinybit_memory->spritesheet[cartridge_index] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
+    uint8_t decoded = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
+
+    // spritesheet data (byte-level access for steganography decoding)
+    size_t spritesheet_bytes = sizeof(tinybit_memory->spritesheet);
+    if (cartridge_index < spritesheet_bytes) {
+        ((uint8_t*)tinybit_memory->spritesheet)[cartridge_index] = decoded;
     }
     // source code
     else {
-        size_t script_offset = cartridge_index - TB_MEM_SPRITESHEET_SIZE;
+        size_t script_offset = cartridge_index - spritesheet_bytes;
         if (script_offset < TB_MEM_SCRIPT_SIZE) {
-            tinybit_memory->script[script_offset] = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
+            tinybit_memory->script[script_offset] = decoded;
         }
     }
 
@@ -47,10 +50,11 @@ static void decode_pixel_load_cover(pngle_t *pngle, uint32_t x, uint32_t y, uint
     }
 
     if(x >= TB_COVER_X && x < TB_COVER_X + TB_SCREEN_WIDTH && y >= TB_COVER_Y && y < TB_COVER_Y + TB_SCREEN_HEIGHT) {
-        size_t display_offset = ((y - TB_COVER_Y) * TB_SCREEN_WIDTH + (x - TB_COVER_X)) * 2;
-        if (display_offset < TB_MEM_DISPLAY_SIZE) {
-            tinybit_memory->spritesheet[display_offset] = (rgba[0] & 0xF0) | (rgba[1] & 0xF0) >> 4;
-            tinybit_memory->spritesheet[display_offset + 1] = (rgba[2] & 0xF0) | (rgba[3] & 0xF0) >> 4;
+        size_t pixel_offset = (y - TB_COVER_Y) * TB_SCREEN_WIDTH + (x - TB_COVER_X);
+        if (pixel_offset < TB_MEM_DISPLAY_SIZE) {
+            uint8_t rg = (rgba[0] & 0xF0) | ((rgba[1] >> 4) & 0x0F);
+            uint8_t ba = (rgba[2] & 0xF0) | ((rgba[3] >> 4) & 0x0F);
+            tinybit_memory->spritesheet[pixel_offset] = (uint16_t)rg | ((uint16_t)ba << 8);
         }
     }
 }

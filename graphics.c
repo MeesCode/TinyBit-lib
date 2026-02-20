@@ -9,8 +9,8 @@
 #include "memory.h"
 #include "tinybit.h"
 
-uint8_t fillColor[2] = { 0x00, 0x00 };
-uint8_t strokeColor[2] = { 0x00, 0x00 };
+uint16_t fillColor = 0;
+uint16_t strokeColor = 0;
 int strokeWidth = 0;
 
 #define MAX_POLYGON_POINTS 32
@@ -49,27 +49,27 @@ int fast_cos(int angle) {
     return fast_sin(angle + 90);
 }
 
-// Alpha blend foreground pixel with background pixel
-void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg) {
-    // Extract from byte format: byte[0]=rrrrgggg, byte[1]=bbbbaaaa
-    uint8_t fg_r = fg[0] & 0xF0;           // upper 4 bits of byte 0
-    uint8_t fg_g = (fg[0] & 0x0F) << 4;    // lower 4 bits of byte 0, shifted up
-    uint8_t fg_b = fg[1] & 0xF0;           // upper 4 bits of byte 1  
-    uint8_t fg_a = (fg[1] & 0x0F) << 4;    // lower 4 bits of byte 1, shifted up
+// Alpha blend foreground pixel onto destination pixel
+// Pixel format: uint16_t where low byte = RRRRGGGG, high byte = BBBBAAAA
+void blend(uint16_t* dst, uint16_t fg) {
+    uint8_t fg_r = fg & 0xF0;
+    uint8_t fg_g = (fg & 0x0F) << 4;
+    uint8_t fg_b = (fg >> 8) & 0xF0;
+    uint8_t fg_a = ((fg >> 8) & 0x0F) << 4;
 
-    if (fg_a == 0xF0) {  // fully opaque
-        result_bytes[0] = fg[0];
-        result_bytes[1] = fg[1];
+    if (fg_a == 0xF0) {
+        *dst = fg;
         return;
     }
-    if (fg_a == 0x00) {  // fully transparent
+    if (fg_a == 0x00) {
         return;
     }
 
-    uint8_t bg_r = bg[0] & 0xF0;
-    uint8_t bg_g = (bg[0] & 0x0F) << 4;
-    uint8_t bg_b = bg[1] & 0xF0;
-    uint8_t bg_a = (bg[1] & 0x0F) << 4;
+    uint16_t bg = *dst;
+    uint8_t bg_r = bg & 0xF0;
+    uint8_t bg_g = (bg & 0x0F) << 4;
+    uint8_t bg_b = (bg >> 8) & 0xF0;
+    uint8_t bg_a = ((bg >> 8) & 0x0F) << 4;
 
     uint8_t inverse_alpha = 0xF0 - fg_a;
 
@@ -78,9 +78,7 @@ void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg) {
     uint8_t out_b = (fg_b * fg_a + bg_b * inverse_alpha) >> 8;
     uint8_t out_a = fg_a + ((bg_a * inverse_alpha) >> 8);
 
-    // Pack back to byte format: byte[0]=rrrrgggg, byte[1]=bbbbaaaa
-    result_bytes[0] = (out_r & 0xF0) | ((out_g >> 4) & 0x0F);
-    result_bytes[1] = (out_b & 0xF0) | ((out_a >> 4) & 0x0F);
+    *dst = pack_color(out_r, out_g, out_b, out_a);
 }
 
 // Generate random integer within specified range
@@ -90,8 +88,8 @@ int random_range(int min, int max) {
 
 // Draw a sprite from spritesheet to display with scaling and clipping
 void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, TARGET target) {
-    uint8_t* src_buf;
-    if(target == TARGET_SPRITESHEET) {
+    uint16_t* src_buf;
+    if (target == TARGET_SPRITESHEET) {
         src_buf = tinybit_memory->spritesheet;
     } else {
         src_buf = tinybit_memory->display;
@@ -107,34 +105,33 @@ void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX
     int scale_x_fixed_point = (sourceW << 16) / targetW;
     int scale_y_fixed_point = (sourceH << 16) / targetH;
 
-    uint8_t* dst = &tinybit_memory->display[((targetY + clipStartY) * TB_SCREEN_WIDTH + targetX + clipStartX) * 2];
+    uint16_t* dst = tinybit_memory->display + (targetY + clipStartY) * TB_SCREEN_WIDTH + targetX + clipStartX;
 
     for (int y = clipStartY; y < clipEndY; ++y) {
         int sourcePixelY = sourceY + ((y * scale_y_fixed_point) >> 16);
 
         if (sourcePixelY < 0 || sourcePixelY >= TB_SCREEN_HEIGHT) {
-            dst += TB_SCREEN_WIDTH * 2;
+            dst += TB_SCREEN_WIDTH;
             continue;
         }
 
-        uint8_t* src_row = &src_buf[sourcePixelY * TB_SCREEN_WIDTH * 2];
+        uint16_t* src_row = src_buf + sourcePixelY * TB_SCREEN_WIDTH;
 
         for (int x = clipStartX; x < clipEndX; ++x) {
             int sourcePixelX = sourceX + ((x * scale_x_fixed_point) >> 16);
             if (sourcePixelX >= 0 && sourcePixelX < TB_SCREEN_WIDTH) {
-                uint8_t* src_pixel = src_row + sourcePixelX * 2;
-                blend(dst, src_pixel, dst);
+                blend(dst, src_row[sourcePixelX]);
             }
-            dst += 2;
+            dst++;
         }
-        dst += (TB_SCREEN_WIDTH - (clipEndX - clipStartX)) * 2;
+        dst += TB_SCREEN_WIDTH - (clipEndX - clipStartX);
     }
 }
 
 // Draw a rotated sprite from spritesheet to display with scaling and clipping
 void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees, TARGET target) {
-    uint8_t* src_buf;
-    if(target == TARGET_SPRITESHEET) {
+    uint16_t* src_buf;
+    if (target == TARGET_SPRITESHEET) {
         src_buf = tinybit_memory->spritesheet;
     } else {
         src_buf = tinybit_memory->display;
@@ -149,10 +146,10 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
     // Calculate expanded bounds for rotated sprite to prevent clipping
     int absCosSin = (abs(cosA) + abs(sinA)) >> 16;
     if (absCosSin == 0) absCosSin = 1;
-    
+
     int expandedW = (targetW * absCosSin) + targetW;
     int expandedH = (targetH * absCosSin) + targetH;
-    
+
     int expandX = (expandedW - targetW) >> 1;
     int expandY = (expandedH - targetH) >> 1;
 
@@ -166,11 +163,13 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
     int scale_x_fixed_point = (sourceW << 16) / targetW;
     int scale_y_fixed_point = (sourceH << 16) / targetH;
 
+    uint16_t* display = tinybit_memory->display;
+
     for (int y = clipStartY; y < clipEndY; ++y) {
         for (int x = clipStartX; x < clipEndX; ++x) {
             int screenX = targetX - expandX + x;
             int screenY = targetY - expandY + y;
-            
+
             if (screenX < 0 || screenX >= TB_SCREEN_WIDTH || screenY < 0 || screenY >= TB_SCREEN_HEIGHT) continue;
 
             int relX = x - expandX - centerX;
@@ -186,9 +185,8 @@ void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int
                 if (sourcePixelX >= 0 && sourcePixelX < TB_SCREEN_WIDTH &&
                     sourcePixelY >= 0 && sourcePixelY < TB_SCREEN_HEIGHT) {
 
-                    uint8_t* src = &src_buf[(sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX) * 2];
-                    uint8_t* dst = &tinybit_memory->display[(screenY * TB_SCREEN_WIDTH + screenX) * 2];
-                    blend(dst, src, dst);
+                    blend(&display[screenY * TB_SCREEN_WIDTH + screenX],
+                          src_buf[sourcePixelY * TB_SCREEN_WIDTH + sourcePixelX]);
                 }
             }
         }
@@ -204,29 +202,23 @@ void draw_rect(int x, int y, int w, int h) {
 
     if (clipX >= TB_SCREEN_WIDTH || clipY >= TB_SCREEN_HEIGHT || clipW <= 0 || clipH <= 0) return;
 
-    uint8_t* display = tinybit_memory->display;
+    uint16_t* display = tinybit_memory->display;
 
     if (strokeWidth > 0) {
         for (int i = 0; i < strokeWidth && i < clipH; i++) {
             for (int j = 0; j < clipW; j++) {
-                uint8_t* top_pixel = &display[((clipY + i) * TB_SCREEN_WIDTH + clipX + j) * 2];
-                uint8_t* bottom_pixel = &display[((clipY + clipH - 1 - i) * TB_SCREEN_WIDTH + clipX + j) * 2];
-
-                blend(top_pixel, strokeColor, top_pixel);
+                blend(&display[(clipY + i) * TB_SCREEN_WIDTH + clipX + j], strokeColor);
                 if (clipH - 1 - i != i) {
-                    blend(bottom_pixel, strokeColor, bottom_pixel);
+                    blend(&display[(clipY + clipH - 1 - i) * TB_SCREEN_WIDTH + clipX + j], strokeColor);
                 }
             }
         }
 
         for (int j = strokeWidth; j < clipH - strokeWidth; j++) {
             for (int i = 0; i < strokeWidth && i < clipW; i++) {
-                uint8_t* left_pixel = &display[((clipY + j) * TB_SCREEN_WIDTH + clipX + i) * 2];
-                uint8_t* right_pixel = &display[((clipY + j) * TB_SCREEN_WIDTH + clipX + clipW - 1 - i) * 2];
-
-                blend(left_pixel, strokeColor, left_pixel);
+                blend(&display[(clipY + j) * TB_SCREEN_WIDTH + clipX + i], strokeColor);
                 if (clipW - 1 - i != i) {
-                    blend(right_pixel, strokeColor, right_pixel);
+                    blend(&display[(clipY + j) * TB_SCREEN_WIDTH + clipX + clipW - 1 - i], strokeColor);
                 }
             }
         }
@@ -240,8 +232,7 @@ void draw_rect(int x, int y, int w, int h) {
     if (fillW > 0 && fillH > 0) {
         for (int j = 0; j < fillH; j++) {
             for (int i = 0; i < fillW; i++) {
-                uint8_t* pixel = &display[((clipY + fillStartY + j) * TB_SCREEN_WIDTH + clipX + fillStartX + i) * 2];
-                blend(pixel, fillColor, pixel);
+                blend(&display[(clipY + fillStartY + j) * TB_SCREEN_WIDTH + clipX + fillStartX + i], fillColor);
             }
         }
     }
@@ -259,7 +250,7 @@ void draw_oval(int x, int y, int w, int h) {
     int strokeRx2 = strokeRx * strokeRx;
     int strokeRy2 = strokeRy * strokeRy;
 
-    uint8_t* display = tinybit_memory->display;
+    uint16_t* display = tinybit_memory->display;
 
     for (int j = 0; j < h; j++) {
         int dy = j - ry;
@@ -277,19 +268,17 @@ void draw_oval(int x, int y, int w, int h) {
             int outer_test = dx2 * ry2 + dy2 * rx2;
 
             if (outer_test <= rx2 * ry2) {
-                uint8_t* pixel = &display[(py * TB_SCREEN_WIDTH + px) * 2];
-
                 if (strokeWidth > 0 && strokeRx > 0 && strokeRy > 0) {
                     int inner_test = dx2 * strokeRy2 + dy2 * strokeRx2;
                     if (inner_test > strokeRx2 * strokeRy2) {
-                        blend(pixel, strokeColor, pixel);
+                        blend(&display[py * TB_SCREEN_WIDTH + px], strokeColor);
                     }
                     else {
-                        blend(pixel, fillColor, pixel);
+                        blend(&display[py * TB_SCREEN_WIDTH + px], fillColor);
                     }
                 }
                 else {
-                    blend(pixel, fillColor, pixel);
+                    blend(&display[py * TB_SCREEN_WIDTH + px], fillColor);
                 }
             }
         }
@@ -299,14 +288,12 @@ void draw_oval(int x, int y, int w, int h) {
 // Set stroke color and width for drawing operations
 void set_stroke(int width, int r, int g, int b, int a) {
     strokeWidth = width >= 0 ? width : 0;
-    strokeColor[0] = (r & 0xF0) | ((g >> 4) & 0x0F);
-    strokeColor[1] = (b & 0xF0) | ((a >> 4) & 0x0F);
+    strokeColor = pack_color(r, g, b, a);
 }
 
 // Set fill color for drawing operations
 void set_fill(int r, int g, int b, int a) {
-    fillColor[0] = (r & 0xF0) | ((g >> 4) & 0x0F);
-    fillColor[1] = (b & 0xF0) | ((a >> 4) & 0x0F);
+    fillColor = pack_color(r, g, b, a);
 }
 
 // Draw a single pixel at specified coordinates
@@ -314,14 +301,16 @@ void draw_pixel(int x, int y) {
     if (x < 0 || x >= TB_SCREEN_WIDTH || y < 0 || y >= TB_SCREEN_HEIGHT) {
         return;
     }
-    uint8_t* pixel = &tinybit_memory->display[(y * TB_SCREEN_WIDTH + x) * 2];
-    blend(pixel, fillColor, pixel);
+    uint16_t* display = tinybit_memory->display;
+    blend(&display[y * TB_SCREEN_WIDTH + x], fillColor);
 }
 
 // Draw a line between two points using Bresenham's algorithm
 void draw_line(int x1, int y1, int x2, int y2) {
     if (strokeWidth <= 0) return;
-    
+
+    uint16_t* display = tinybit_memory->display;
+
     int dx = abs(x2 - x1);
     int dy = abs(y2 - y1);
     int sx = x1 < x2 ? 1 : -1;
@@ -334,8 +323,7 @@ void draw_line(int x1, int y1, int x2, int y2) {
     while (1) {
         if (strokeWidth == 1) {
             if (x >= 0 && x < TB_SCREEN_WIDTH && y >= 0 && y < TB_SCREEN_HEIGHT) {
-                uint8_t* pixel = &tinybit_memory->display[(y * TB_SCREEN_WIDTH + x) * 2];
-                blend(pixel, strokeColor, pixel);
+                blend(&display[y * TB_SCREEN_WIDTH + x], strokeColor);
             }
         } else {
             int radius = strokeWidth >> 1;
@@ -344,8 +332,7 @@ void draw_line(int x1, int y1, int x2, int y2) {
                     int px = x + dx;
                     int py = y + dy;
                     if (px >= 0 && px < TB_SCREEN_WIDTH && py >= 0 && py < TB_SCREEN_HEIGHT) {
-                        uint8_t* pixel = &tinybit_memory->display[(py * TB_SCREEN_WIDTH + px) * 2];
-                        blend(pixel, strokeColor, pixel);
+                        blend(&display[py * TB_SCREEN_WIDTH + px], strokeColor);
                     }
                 }
             }
@@ -367,7 +354,7 @@ void draw_line(int x1, int y1, int x2, int y2) {
 
 // Clear the display buffer (set all pixels to black/transparent)
 void draw_cls() {
-    memset(&tinybit_memory->display, 0, TB_MEM_DISPLAY_SIZE);
+    memset(tinybit_memory->display, 0, sizeof(tinybit_memory->display));
 }
 
 // Add a point to the polygon vertex list
@@ -388,9 +375,11 @@ void poly_clear() {
 void draw_polygon() {
     if (polygon_point_count < 3) return;
 
+    uint16_t* display = tinybit_memory->display;
+
     int minY = polygon_points[0].y;
     int maxY = polygon_points[0].y;
-    
+
     for (int i = 1; i < polygon_point_count; i++) {
         if (polygon_points[i].y < minY) minY = polygon_points[i].y;
         if (polygon_points[i].y > maxY) maxY = polygon_points[i].y;
@@ -409,7 +398,7 @@ void draw_polygon() {
             int j = (i + 1) % polygon_point_count;
             int y1 = polygon_points[i].y;
             int y2 = polygon_points[j].y;
-            
+
             if ((y1 <= y && y2 > y) || (y2 <= y && y1 > y)) {
                 int x1 = polygon_points[i].x;
                 int x2 = polygon_points[j].x;
@@ -432,13 +421,12 @@ void draw_polygon() {
             if (i + 1 < intersectionCount) {
                 int x1 = intersections[i];
                 int x2 = intersections[i + 1];
-                
+
                 x1 = x1 < 0 ? 0 : x1;
                 x2 = x2 >= TB_SCREEN_WIDTH ? TB_SCREEN_WIDTH - 1 : x2;
-                
+
                 for (int x = x1; x <= x2; x++) {
-                    uint8_t* pixel = &tinybit_memory->display[(y * TB_SCREEN_WIDTH + x) * 2];
-                    blend(pixel, fillColor, pixel);
+                    blend(&display[y * TB_SCREEN_WIDTH + x], fillColor);
                 }
             }
         }
@@ -447,7 +435,7 @@ void draw_polygon() {
     if (strokeWidth > 0) {
         for (int i = 0; i < polygon_point_count; i++) {
             int j = (i + 1) % polygon_point_count;
-            draw_line(polygon_points[i].x, polygon_points[i].y, 
+            draw_line(polygon_points[i].x, polygon_points[i].y,
                      polygon_points[j].x, polygon_points[j].y);
         }
     }

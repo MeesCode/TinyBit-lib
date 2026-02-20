@@ -13,10 +13,18 @@ typedef enum {
     TARGET_SPRITESHEET
 } TARGET;
 
-extern uint8_t fillColor[2];
-extern uint8_t strokeColor[2];
+// Pixel format: uint16_t where low byte = RRRRGGGG, high byte = BBBBAAAA
+extern uint16_t fillColor;
+extern uint16_t strokeColor;
 
 extern int strokeWidth;
+
+// Pack RGBA components (8-bit each, upper 4 bits used) into a RGBA4444 pixel
+static inline uint16_t pack_color(int r, int g, int b, int a) {
+    uint8_t rg = (r & 0xF0) | ((g >> 4) & 0x0F);
+    uint8_t ba = (b & 0xF0) | ((a >> 4) & 0x0F);
+    return (uint16_t)rg | ((uint16_t)ba << 8);
+}
 
 // Graphics function declarations
 int random_range(int, int);
@@ -32,6 +40,6 @@ void draw_cls();
 void poly_add(int x, int y);
 void poly_clear();
 void draw_polygon();
-void blend(uint8_t* result_bytes, uint8_t* fg, uint8_t* bg);
+void blend(uint16_t* dst, uint16_t fg);
 
 #endif

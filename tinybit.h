@@ -22,8 +22,8 @@
 #define TB_COVER_Y 34
 
 // Memory sizes
-#define TB_MEM_SPRITESHEET_SIZE     (32 * 1024) // 32Kb
-#define TB_MEM_DISPLAY_SIZE         (32 * 1024) // 32Kb
+#define TB_MEM_SPRITESHEET_SIZE     (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb
+#define TB_MEM_DISPLAY_SIZE         (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb
 #define TB_MEM_SCRIPT_SIZE          (12 * 1024) // 12Kb
 #define TB_MEM_LUA_STATE_SIZE       (60 * 1024) // 60Kb
 #define TB_MEM_AUDIO_DATA_SIZE      (12 * 1024) // 12Kb
@@ -33,8 +33,8 @@
 #define TB_MEM_USER_SIZE            (10 * 1024) // 10Kb
 
 struct TinyBitMemory {
-    uint8_t spritesheet[TB_MEM_SPRITESHEET_SIZE];
-    uint8_t display[TB_MEM_DISPLAY_SIZE];
+    uint16_t spritesheet[TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT];
+    uint16_t display[TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT];
     uint8_t script[TB_MEM_SCRIPT_SIZE];
     uint8_t lua_state[TB_MEM_LUA_STATE_SIZE];
     uint8_t audio_data[TB_MEM_AUDIO_DATA_SIZE];
