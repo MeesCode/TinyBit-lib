@@ -65,10 +65,10 @@ bool tinybit_start();
 bool tinybit_restart();
 void tinybit_loop();
 void tinybit_stop();
+void tinybit_sleep(int ms);
 
 // Callback function setters
 void tinybit_log_cb(void (*log_func_ptr)(const char*));
-void tinybit_sleep_cb(void (*sleep_func_ptr)(int ms));
 void tinybit_get_ticks_ms_cb(int (*get_ticks_ms_func_ptr)());
 void tinybit_render_cb(void (*render_func_ptr)());
 void tinybit_poll_input_cb(void (*poll_input_func_ptr)());

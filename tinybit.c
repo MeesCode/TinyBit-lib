@@ -21,12 +21,13 @@
 #include "lua/lauxlib.h"
 
 static bool running = true;
+static int sleep_ms = 0;
+static int sleep_start_time = 0;
 
 static lua_State* L;
 
 static void (*frame_func)();
 static void (*input_func)();
-static void (*sleep_func)();
 static int (*get_ticks_ms_func)();
 static void (*audio_queue_func)();
 
@@ -84,6 +85,11 @@ void tinybit_stop() {
     cartridge_destroy();
 }
 
+void tinybit_sleep(int ms) {
+    sleep_ms = ms;
+    sleep_start_time = get_ticks_ms_func();
+}
+
 // Feed cartridge PNG data to the TinyBit decoder
 bool tinybit_feed_cartridge(const uint8_t* buffer, size_t size){
     return cartridge_feed(buffer, size);
@@ -107,14 +113,18 @@ void tinybit_loop() {
     start_time += input_time;
 
     // LOGIC
-    lua_getglobal(L, "_draw");
-    if (lua_pcall(L, 0, 1, 0) == LUA_OK) {
-        lua_pop(L, lua_gettop(L));
-    } else {
-        lua_pop(L, lua_gettop(L)); // pop error message
-        printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
-        strcpy((char*)tinybit_memory->script, error_screen);
-        tinybit_restart();
+    if(sleep_ms == 0 || get_ticks_ms_func() - sleep_start_time >= sleep_ms) {
+        sleep_ms = 0;
+        lua_getglobal(L, "_draw");
+        if (lua_pcall(L, 0, 1, 0) == LUA_OK) {
+            lua_pop(L, lua_gettop(L));
+        } else {
+            lua_pop(L, lua_gettop(L)); // pop error message
+            printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
+            audio_stop_all();
+            strcpy((char*)tinybit_memory->script, error_screen);
+            tinybit_restart();
+        }
     }
 
     // deferred game load
@@ -144,7 +154,6 @@ void tinybit_loop() {
     start_time += display_time;
 
     // printf("used memory: %zu bytes\n", lua_pool_get_used());
-
     // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
 }
 
@@ -164,15 +173,6 @@ void tinybit_poll_input_cb(void (*poll_input_func_ptr)()) {
     }
 
     input_func = poll_input_func_ptr;
-}
-
-// Set callback function for sleeping/delaying execution
-void tinybit_sleep_cb(void (*sleep_func_ptr)(int ms)) {
-    if (!sleep_func_ptr) {
-        return; // Error: null pointer
-    }
-
-    sleep_func = sleep_func_ptr;
 }
 
 void tinybit_log_cb(void (*log_func_ptr)(const char*)){

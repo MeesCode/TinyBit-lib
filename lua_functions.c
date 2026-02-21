@@ -112,7 +112,7 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "poly_add");
     lua_pushcfunction(L, lua_poly_clear);
     lua_setglobal(L, "poly_clear");
-    lua_pushcfunction(L, poly);
+    lua_pushcfunction(L, lua_poly);
     lua_setglobal(L, "draw_polygon");
     lua_pushcfunction(L, lua_music);
     lua_setglobal(L, "music");
@@ -128,6 +128,8 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "hsb");
     lua_pushcfunction(L, lua_hsba);
     lua_setglobal(L, "hsba");
+    lua_pushcfunction(L, lua_sleep);
+    lua_setglobal(L, "sleep");
 }
 
 // Lua function to log messages to the console
@@ -425,7 +427,7 @@ int lua_poly_clear(lua_State* L) {
 }
 
 // Lua function to draw the current polygon
-int poly(lua_State* L) {
+int lua_poly(lua_State* L) {
     draw_polygon();
     return 0;
 }
@@ -551,4 +553,10 @@ int lua_sfx(lua_State* L) {
 int lua_sfx_active(lua_State* L) {
     lua_pushboolean(L, is_channel_active(1));
     return 1;
+}
+
+int lua_sleep(lua_State* L) {
+    int ms = luaL_checkinteger(L, 1);
+    tinybit_sleep(ms);
+    return 0;
 }

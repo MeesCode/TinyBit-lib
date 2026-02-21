@@ -33,7 +33,7 @@ int lua_print(lua_State* L);
 int lua_text(lua_State* L);
 int lua_poly_add(lua_State* L);
 int lua_poly_clear(lua_State* L);
-int poly(lua_State* L);
+int lua_poly(lua_State* L);
 int lua_music(lua_State* L);
 int lua_sfx(lua_State* L);
 int lua_sfx_active(lua_State* L);
@@ -41,5 +41,6 @@ int lua_rgba(lua_State* L);
 int lua_rgb(lua_State* L);
 int lua_hsb(lua_State* L);
 int lua_hsba(lua_State* L);
+int lua_sleep(lua_State* L);
 
 #endif
