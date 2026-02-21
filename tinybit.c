@@ -14,7 +14,7 @@
 #include "audio.h"
 #include "input.h"
 #include "font.h"
-#include "launcher.h"
+#include "lua_scripts.h"
 
 #include "lua/lua.h"
 #include "lua/lualib.h"
@@ -113,7 +113,8 @@ void tinybit_loop() {
     } else {
         lua_pop(L, lua_gettop(L)); // pop error message
         printf("[TinyBit] Lua error loop: %s\n", lua_tostring(L, -1));
-        return; // runtime error in lua code
+        strcpy((char*)tinybit_memory->script, error_screen);
+        tinybit_restart();
     }
 
     // deferred game load

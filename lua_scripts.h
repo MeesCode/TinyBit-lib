@@ -1,5 +1,5 @@
-#ifndef LAUNCHER_H
-#define LAUNCHER_H
+#ifndef LUA_SCRIPTS_H
+#define LUA_SCRIPTS_H
 
 const char* launcher =
     "colors = {}\n"
@@ -14,7 +14,7 @@ const char* launcher =
     "   V:SINE\n"
     "   z2 d B/G/ [G3d3g3]\n"
     "   V:SAW\n"
-    "   z4 G,,3 z\n"
+    "   z4 G,,3 z2\n"
     "]]\n"
     "for i=1, 128 do\n"
     "   colors[i] = random(0,50)\n"
@@ -85,5 +85,14 @@ const char* launcher =
     "       sprite(0, 0, 128, 128, -128+x, 0, 128, 128)\n"
     "    end\n"
     "end\n";
+
+
+const char* error_screen =
+    "function _draw()\n"
+    "   cls()\n"
+    "   text(0xffffffff)\n"
+    "   cursor(10, 10)\n"
+    "   print('Lua error :(')\n"
+    "end\n";
     
-#endif // LAUNCHER_H
+#endif // LUA_SCRIPTS_H
