@@ -200,13 +200,16 @@ void process_audio() {
                 // Calculate envelope gain
                 int gain = GAIN / (channel->sheet.voice_count > 0 ? channel->sheet.voice_count : 1);
 
-                // Decay envelope
-                if (channel->voices[v].total_samples - channel->voices[v].sample_processed < ENVELOPE_SAMPLES) {
-                    gain = (gain * (channel->voices[v].total_samples - channel->voices[v].sample_processed)) / ENVELOPE_SAMPLES;
-                }
-                // Attack envelope
-                else if (channel->voices[v].sample_processed < ENVELOPE_SAMPLES) {
-                    gain = (gain * channel->voices[v].sample_processed) / ENVELOPE_SAMPLES;
+                // apply simple attack/decay envelope for non-noise waveforms to reduce clicks
+                if(channel->voices[v].waveform != NOISE){
+                    // Decay envelope
+                    if (channel->voices[v].total_samples - channel->voices[v].sample_processed < ENVELOPE_SAMPLES) {
+                        gain = (gain * (channel->voices[v].total_samples - channel->voices[v].sample_processed)) / ENVELOPE_SAMPLES;
+                    }
+                    // Attack envelope
+                    else if (channel->voices[v].sample_processed < ENVELOPE_SAMPLES) {
+                        gain = (gain * channel->voices[v].sample_processed) / ENVELOPE_SAMPLES;
+                    }
                 }
 
                 // Skip if rest note
