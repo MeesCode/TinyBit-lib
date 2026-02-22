@@ -120,6 +120,10 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "sfx");
     lua_pushcfunction(L, lua_sfx_active);
     lua_setglobal(L, "sfx_active");
+    lua_pushcfunction(L, lua_pset);
+    lua_setglobal(L, "pset");
+    lua_pushcfunction(L, lua_pget);
+    lua_setglobal(L, "pget");
     lua_pushcfunction(L, lua_rgba);
     lua_setglobal(L, "rgba");
     lua_pushcfunction(L, lua_rgb);
@@ -259,6 +263,15 @@ int lua_random(lua_State* L) {
     return 1;
 }
 
+// Convert internal RGBA4444 uint16_t to RGBA8888 uint32_t
+static uint32_t rgba4444_to_8888(uint16_t color) {
+    uint8_t r = color & 0xF0;
+    uint8_t g = (color & 0x0F) << 4;
+    uint8_t b = (color >> 8) & 0xF0;
+    uint8_t a = ((color >> 8) & 0x0F) << 4;
+    return ((uint32_t)r << 24) | ((uint32_t)g << 16) | ((uint32_t)b << 8) | (uint32_t)a;
+}
+
 // Convert RGBA8888 uint32_t to internal RGBA4444 uint16_t
 static uint16_t rgba8888_to_4444(uint32_t color) {
     int r = (color >> 24) & 0xFF;
@@ -374,6 +387,34 @@ int lua_hsb(lua_State* L) {
     hsb_to_rgb(h, s, b, &r, &g, &bl);
     uint32_t color = ((uint32_t)(r & 0xFF) << 24) | ((uint32_t)(g & 0xFF) << 16) | ((uint32_t)(bl & 0xFF) << 8) | 0xFF;
     lua_pushnumber(L, color);
+    return 1;
+}
+
+// Lua function: pset(x, y, color) - set a pixel to a specific color
+int lua_pset(lua_State* L) {
+    if (lua_gettop(L) != 3) {
+        return 0;
+    }
+
+    int x = (int)luaL_checknumber(L, 1);
+    int y = (int)luaL_checknumber(L, 2);
+    uint32_t color = (uint32_t)luaL_checknumber(L, 3);
+
+    pset(x, y, rgba8888_to_4444(color));
+    return 0;
+}
+
+// Lua function: pget(x, y) - get the color of a pixel as RGBA8888
+int lua_pget(lua_State* L) {
+    if (lua_gettop(L) != 2) {
+        return 0;
+    }
+
+    int x = (int)luaL_checknumber(L, 1);
+    int y = (int)luaL_checknumber(L, 2);
+
+    uint16_t color = pget(x, y);
+    lua_pushnumber(L, rgba4444_to_8888(color));
     return 1;
 }
 

@@ -21,6 +21,7 @@ int lua_rect(lua_State* L);
 int lua_line(lua_State* L);
 int lua_oval(lua_State* L);
 int lua_pset(lua_State* L);
+int lua_pget(lua_State* L);
 int lua_bpm(lua_State* L);
 int lua_btn(lua_State* L);
 int lua_btnp(lua_State* L);

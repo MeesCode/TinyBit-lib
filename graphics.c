@@ -305,6 +305,24 @@ void draw_pixel(int x, int y) {
     blend(&display[y * TB_SCREEN_WIDTH + x], fillColor);
 }
 
+// Set a pixel at specified coordinates to a specific color
+void pset(int x, int y, uint16_t color) {
+    if (x < 0 || x >= TB_SCREEN_WIDTH || y < 0 || y >= TB_SCREEN_HEIGHT) {
+        return;
+    }
+    uint16_t* display = tinybit_memory->display;
+    display[y * TB_SCREEN_WIDTH + x] = color;
+}
+
+// Get the color of a pixel at specified coordinates
+uint16_t pget(int x, int y) {
+    if (x < 0 || x >= TB_SCREEN_WIDTH || y < 0 || y >= TB_SCREEN_HEIGHT) {
+        return 0;
+    }
+    uint16_t* display = tinybit_memory->display;
+    return display[y * TB_SCREEN_WIDTH + x];
+}
+
 // Draw a line between two points using Bresenham's algorithm
 void draw_line(int x1, int y1, int x2, int y2) {
     if (strokeWidth <= 0) return;
