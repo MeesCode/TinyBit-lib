@@ -111,6 +111,10 @@ lua_State* lua_pool_newstate(void) {
     lua_State *L = lua_newstate(l_alloc_pool, NULL);
     if (L) {
         lua_setup(L);
+        // Tune GC for small 256KB memory pool:
+        // - pause=120: (default 100) start new cycle when memory is 120% of last cycle
+        // - stepmul=200: (default 100) do 2x more work per step
+        lua_gc(L, LUA_GCINC, 120, 200, 0);
     }
     return L;
 }

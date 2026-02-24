@@ -89,7 +89,8 @@ const char* launcher =
 
 const char* error_screen =
     "function _draw()\n"
-    "   text(0xffffffff)\n"
+    "   text(rgb(255, 255, 255))\n"
+    "   fill(rgba(0, 0, 0, 255))\n"
     "   cursor(10, 10)\n"
     "   print('Lua error :(')\n"
     "end\n";

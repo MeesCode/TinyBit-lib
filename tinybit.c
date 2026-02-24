@@ -23,6 +23,7 @@
 static bool running = true;
 static int sleep_ms = 0;
 static int sleep_start_time = 0;
+long max_memory_usage = 0;
 
 static lua_State* L;
 
@@ -155,7 +156,11 @@ void tinybit_loop() {
     display_time = get_ticks_ms_func() - start_time;
     start_time += display_time;
 
-    printf("used memory: %zu bytes\n", lua_pool_get_used());
+    // size_t used_memory = lua_pool_get_used();
+    // if (used_memory > max_memory_usage) {
+    //     max_memory_usage = used_memory;
+    //     printf("[TinyBit] New max memory usage: %zu bytes\n", max_memory_usage);
+    // }
     // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
 }
 
