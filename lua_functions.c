@@ -263,24 +263,6 @@ int lua_random(lua_State* L) {
     return 1;
 }
 
-// Convert internal RGBA4444 uint16_t to RGBA8888 uint32_t
-static uint32_t rgba4444_to_8888(uint16_t color) {
-    uint8_t r = color & 0xF0;
-    uint8_t g = (color & 0x0F) << 4;
-    uint8_t b = (color >> 8) & 0xF0;
-    uint8_t a = ((color >> 8) & 0x0F) << 4;
-    return ((uint32_t)r << 24) | ((uint32_t)g << 16) | ((uint32_t)b << 8) | (uint32_t)a;
-}
-
-// Convert RGBA8888 uint32_t to internal RGBA4444 uint16_t
-static uint16_t rgba8888_to_4444(uint32_t color) {
-    int r = (color >> 24) & 0xFF;
-    int g = (color >> 16) & 0xFF;
-    int b = (color >> 8) & 0xFF;
-    int a = color & 0xFF;
-    return pack_color(r, g, b, a);
-}
-
 // Lua function: stroke(width, color) - set stroke width and color
 int lua_stroke(lua_State* L) {
     if (lua_gettop(L) != 2) {
@@ -288,9 +270,9 @@ int lua_stroke(lua_State* L) {
     }
 
     int width = (int)luaL_checknumber(L, 1);
-    uint32_t color = (uint32_t)luaL_checknumber(L, 2);
+    uint16_t color = (uint16_t)luaL_checkinteger(L, 2);
 
-    set_stroke(width, rgba8888_to_4444(color));
+    set_stroke(width, color);
     return 0;
 }
 
@@ -300,8 +282,8 @@ int lua_fill(lua_State* L) {
         return 0;
     }
 
-    uint32_t color = (uint32_t)luaL_checknumber(L, 1);
-    set_fill(rgba8888_to_4444(color));
+    uint16_t color = (uint16_t)luaL_checkinteger(L, 1);
+    set_fill(color);
     return 0;
 }
 
@@ -311,29 +293,27 @@ int lua_text(lua_State* L) {
         return 0;
     }
 
-    uint32_t color = (uint32_t)luaL_checknumber(L, 1);
-    font_text_color(rgba8888_to_4444(color));
+    uint16_t color = (uint16_t)luaL_checkinteger(L, 1);
+    font_text_color(color);
     return 0;
 }
 
-// Lua function: rgba(r, g, b, a) - pack into RGBA8888
+// Lua function: rgba(r, g, b, a) - pack into RGBA4444
 int lua_rgba(lua_State* L) {
     int r = (int)luaL_checknumber(L, 1) & 0xFF;
     int g = (int)luaL_checknumber(L, 2) & 0xFF;
     int b = (int)luaL_checknumber(L, 3) & 0xFF;
     int a = (int)luaL_checknumber(L, 4) & 0xFF;
-    uint32_t color = ((uint32_t)r << 24) | ((uint32_t)g << 16) | ((uint32_t)b << 8) | (uint32_t)a;
-    lua_pushnumber(L, color);
+    lua_pushinteger(L, pack_color(r, g, b, a));
     return 1;
 }
 
-// Lua function: rgb(r, g, b) - pack into RGBA8888 with alpha=255
+// Lua function: rgb(r, g, b) - pack into RGBA4444 with alpha=255
 int lua_rgb(lua_State* L) {
     int r = (int)luaL_checknumber(L, 1) & 0xFF;
     int g = (int)luaL_checknumber(L, 2) & 0xFF;
     int b = (int)luaL_checknumber(L, 3) & 0xFF;
-    uint32_t color = ((uint32_t)r << 24) | ((uint32_t)g << 16) | ((uint32_t)b << 8) | 0xFF;
-    lua_pushnumber(L, color);
+    lua_pushinteger(L, pack_color(r, g, b, 255));
     return 1;
 }
 
@@ -363,7 +343,7 @@ static void hsb_to_rgb(float h, float s, float b, int* r, int* g, int* bl) {
     *bl = (int)((bb + m) * 255.0 + 0.5);
 }
 
-// Lua function: hsba(h, s, b, a) - convert HSB + alpha to RGBA8888
+// Lua function: hsba(h, s, b, a) - convert HSB + alpha to RGBA4444
 int lua_hsba(lua_State* L) {
     float h = luaL_checknumber(L, 1);
     float s = luaL_checknumber(L, 2);
@@ -372,12 +352,11 @@ int lua_hsba(lua_State* L) {
 
     int r, g, bl;
     hsb_to_rgb(h, s, b, &r, &g, &bl);
-    uint32_t color = ((uint32_t)(r & 0xFF) << 24) | ((uint32_t)(g & 0xFF) << 16) | ((uint32_t)(bl & 0xFF) << 8) | (uint32_t)a;
-    lua_pushnumber(L, color);
+    lua_pushinteger(L, pack_color(r & 0xFF, g & 0xFF, bl & 0xFF, a));
     return 1;
 }
 
-// Lua function: hsb(h, s, b) - convert HSB to RGBA8888 with alpha=255
+// Lua function: hsb(h, s, b) - convert HSB to RGBA4444 with alpha=255
 int lua_hsb(lua_State* L) {
     float h = luaL_checknumber(L, 1);
     float s = luaL_checknumber(L, 2);
@@ -385,8 +364,7 @@ int lua_hsb(lua_State* L) {
 
     int r, g, bl;
     hsb_to_rgb(h, s, b, &r, &g, &bl);
-    uint32_t color = ((uint32_t)(r & 0xFF) << 24) | ((uint32_t)(g & 0xFF) << 16) | ((uint32_t)(bl & 0xFF) << 8) | 0xFF;
-    lua_pushnumber(L, color);
+    lua_pushinteger(L, pack_color(r & 0xFF, g & 0xFF, bl & 0xFF, 255));
     return 1;
 }
 
@@ -398,13 +376,13 @@ int lua_pset(lua_State* L) {
 
     int x = (int)luaL_checknumber(L, 1);
     int y = (int)luaL_checknumber(L, 2);
-    uint32_t color = (uint32_t)luaL_checknumber(L, 3);
+    uint16_t color = (uint16_t)luaL_checkinteger(L, 3);
 
-    pset(x, y, rgba8888_to_4444(color));
+    pset(x, y, color);
     return 0;
 }
 
-// Lua function: pget(x, y) - get the color of a pixel as RGBA8888
+// Lua function: pget(x, y) - get the color of a pixel as RGBA4444
 int lua_pget(lua_State* L) {
     if (lua_gettop(L) != 2) {
         return 0;
@@ -414,7 +392,7 @@ int lua_pget(lua_State* L) {
     int y = (int)luaL_checknumber(L, 2);
 
     uint16_t color = pget(x, y);
-    lua_pushnumber(L, rgba4444_to_8888(color));
+    lua_pushinteger(L, color);
     return 1;
 }
 

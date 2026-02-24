@@ -6,8 +6,8 @@
 #include <stddef.h>
 
 // cartridge dimensions
-#define TB_CARTRIDGE_WIDTH 200
-#define TB_CARTRIDGE_HEIGHT 230
+#define TB_CARTRIDGE_WIDTH 300
+#define TB_CARTRIDGE_HEIGHT 300
 
 // Screen dimensions
 #define TB_SCREEN_WIDTH 128
@@ -24,8 +24,8 @@
 // Memory sizes
 #define TB_MEM_SPRITESHEET_SIZE     (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb
 #define TB_MEM_DISPLAY_SIZE         (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb
-#define TB_MEM_SCRIPT_SIZE          (12 * 1024) // 12Kb
-#define TB_MEM_LUA_STATE_SIZE       (60 * 1024) // 60Kb
+#define TB_MEM_SCRIPT_SIZE          (55 * 1024) // 55Kb
+#define TB_MEM_LUA_STATE_SIZE       (200 * 1024) // 60Kb
 #define TB_MEM_AUDIO_DATA_SIZE      (12 * 1024) // 12Kb
 #define TB_MEM_PNGLE_SIZE           (48 * 1024) // 48Kb
 #define TB_MEM_AUDIO_BUFFER_SIZE    (TB_AUDIO_FRAME_SAMPLES * 2) // 734 bytes (367 16-bit samples)

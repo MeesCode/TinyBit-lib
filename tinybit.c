@@ -155,7 +155,7 @@ void tinybit_loop() {
     display_time = get_ticks_ms_func() - start_time;
     start_time += display_time;
 
-    // printf("used memory: %zu bytes\n", lua_pool_get_used());
+    printf("used memory: %zu bytes\n", lua_pool_get_used());
     // printf("[TinyBit] Frame time: %d ms (render: %d ms, display: %d ms, audio: %d ms)\n", get_ticks_ms_func() - frame_time, render_time, display_time, audio_time);
 }
 
