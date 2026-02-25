@@ -18,8 +18,8 @@
 #define TB_AUDIO_FRAME_SAMPLES 367 // samples per 60fps frame
 
 // define cover location
-#define TB_COVER_X 35
-#define TB_COVER_Y 34
+#define TB_COVER_X 64
+#define TB_COVER_Y 60
 
 // Memory sizes
 #define TB_MEM_SPRITESHEET_SIZE     (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb

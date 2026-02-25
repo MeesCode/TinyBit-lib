@@ -73,7 +73,6 @@ bool tinybit_start(){
 bool tinybit_restart(){
     lua_close(L);
     L = lua_pool_newstate();
-    memset(tinybit_memory->spritesheet, 0, sizeof(tinybit_memory->spritesheet)); // clear spritesheet
     draw_cls();
     return tinybit_start();
 }
