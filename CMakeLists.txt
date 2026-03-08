@@ -14,7 +14,6 @@ target_sources(tinybit_lib INTERFACE
     ${CMAKE_CURRENT_LIST_DIR}/lua_functions.c
     ${CMAKE_CURRENT_LIST_DIR}/pngle/pngle.c
     ${CMAKE_CURRENT_LIST_DIR}/pngle/miniz.c
-    ${CMAKE_CURRENT_LIST_DIR}/helpers.c
     ${CMAKE_CURRENT_LIST_DIR}/ABC-parser/abc_parser.c
 )
 
