@@ -21,10 +21,27 @@
 #define TB_COVER_X 64
 #define TB_COVER_Y 60
 
+// Cartridge header (on-disk layout, little-endian, 146 bytes)
+#define TB_HEADER_TITLE_SIZE    64
+#define TB_HEADER_AUTHOR_SIZE   64
+#define TB_HEADER_SIZE          146
+
+struct TinyBitHeader {
+    uint16_t format_version;
+    uint16_t flags;
+    uint32_t script_size;
+    uint32_t checksum;      // CRC-32 (IEEE 802.3) of the lua script bytes
+    char     title[TB_HEADER_TITLE_SIZE];
+    char     author[TB_HEADER_AUTHOR_SIZE];
+    uint16_t game_version;
+    uint32_t package_date;
+};
+
 // Memory sizes
 #define TB_MEM_SPRITESHEET_SIZE     (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb
 #define TB_MEM_DISPLAY_SIZE         (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb
 #define TB_MEM_SCRIPT_SIZE          (32 * 1024) // 32Kb
+#define TB_MEM_CARTRIDGE_SCRIPT_SIZE (TB_MEM_SCRIPT_SIZE - TB_HEADER_SIZE) // script bytes that fit alongside header on a cartridge
 #define TB_MEM_LUA_STATE_SIZE       (256 * 1024) // 256Kb
 #define TB_MEM_AUDIO_DATA_SIZE      (12 * 1024) // 12Kb
 #define TB_MEM_PNGLE_SIZE           (48 * 1024) // 48Kb
