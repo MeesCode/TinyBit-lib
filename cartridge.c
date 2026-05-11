@@ -20,7 +20,6 @@ static size_t cartridge_index = 0;
 static pngle_t *pngle;
 static int pending_gameload = -1;
 
-static uint8_t header_bytes[TB_HEADER_SIZE];
 static struct TinyBitHeader header;
 static bool header_parsed = false;
 
@@ -42,16 +41,17 @@ static void log_line(const char* s) {
 }
 
 static void parse_and_log_header(void) {
-    header.format_version = read_u16_le(&header_bytes[0]);
-    header.flags          = read_u16_le(&header_bytes[2]);
-    header.script_size    = read_u32_le(&header_bytes[4]);
-    header.checksum       = read_u32_le(&header_bytes[8]);
-    memcpy(header.title,   &header_bytes[12], TB_HEADER_TITLE_SIZE);
-    memcpy(header.author,  &header_bytes[76], TB_HEADER_AUTHOR_SIZE);
+    const uint8_t* h = tinybit_memory->header;
+    header.format_version = read_u16_le(&h[0]);
+    header.flags          = read_u16_le(&h[2]);
+    header.script_size    = read_u32_le(&h[4]);
+    header.checksum       = read_u32_le(&h[8]);
+    memcpy(header.title,   &h[12], TB_HEADER_TITLE_SIZE);
+    memcpy(header.author,  &h[76], TB_HEADER_AUTHOR_SIZE);
     header.title[TB_HEADER_TITLE_SIZE - 1]   = '\0';
     header.author[TB_HEADER_AUTHOR_SIZE - 1] = '\0';
-    header.game_version = read_u16_le(&header_bytes[140]);
-    header.package_date = read_u32_le(&header_bytes[142]);
+    header.game_version = read_u16_le(&h[140]);
+    header.package_date = read_u32_le(&h[142]);
 
     if (!log_func) return;
 
@@ -83,9 +83,9 @@ static void decode_pixel_load_game(pngle_t *pngle, uint32_t x, uint32_t y, uint3
 
     uint8_t decoded = (rgba[0] & 0x3) << 6 | (rgba[1] & 0x3) << 4 | (rgba[2] & 0x3) << 2 | (rgba[3] & 0x3) << 0;
 
-    // header (first TB_HEADER_SIZE pixels)
+    // header (first TB_HEADER_SIZE pixels) — written directly into memory
     if (cartridge_index < TB_HEADER_SIZE) {
-        header_bytes[cartridge_index] = decoded;
+        tinybit_memory->header[cartridge_index] = decoded;
         cartridge_index++;
         if (cartridge_index == TB_HEADER_SIZE && !header_parsed) {
             parse_and_log_header();
@@ -204,12 +204,18 @@ void cartridge_destroy(void) {
 void cartridge_reset(void) {
     cartridge_index = 0;
     header_parsed = false;
-    memset(header_bytes, 0, sizeof(header_bytes));
     memset(&header, 0, sizeof(header));
+    // Header bytes in tinybit_memory->header are zeroed by memory_init()
+    // on the next tinybit_init and overwritten by the next cartridge feed.
 }
 
 bool cartridge_feed(const uint8_t* buffer, size_t size) {
-    return pngle_feed(pngle, buffer, size) != -2;
+    int rc = pngle_feed(pngle, buffer, size);
+    // Defend luaL_dostring against an over-eager encoder: ensure the
+    // script region is always NUL-terminated regardless of what just
+    // got written into tinybit_memory->script.
+    tinybit_memory->script[TB_MEM_SCRIPT_SIZE - 1] = '\0';
+    return rc != -2;
 }
 
 const struct TinyBitHeader* cartridge_header(void) {

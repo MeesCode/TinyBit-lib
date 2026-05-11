@@ -40,8 +40,7 @@ struct TinyBitHeader {
 // Memory sizes
 #define TB_MEM_SPRITESHEET_SIZE     (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb
 #define TB_MEM_DISPLAY_SIZE         (TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT * 2) // 32Kb
-#define TB_MEM_SCRIPT_SIZE          (32 * 1024) // 32Kb
-#define TB_MEM_CARTRIDGE_SCRIPT_SIZE (TB_MEM_SCRIPT_SIZE - TB_HEADER_SIZE) // script bytes that fit alongside header on a cartridge
+#define TB_MEM_SCRIPT_SIZE          (32 * 1024 - TB_HEADER_SIZE) // 32622 bytes; matches cartridge script payload
 #define TB_MEM_LUA_STATE_SIZE       (256 * 1024) // 256Kb
 #define TB_MEM_AUDIO_DATA_SIZE      (12 * 1024) // 12Kb
 #define TB_MEM_PNGLE_SIZE           (48 * 1024) // 48Kb
@@ -50,15 +49,16 @@ struct TinyBitHeader {
 #define TB_MEM_USER_SIZE            (10 * 1024) // 10Kb
 
 struct TinyBitMemory {
+    uint8_t  header[TB_HEADER_SIZE];
     uint16_t spritesheet[TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT];
     uint16_t display[TB_SCREEN_WIDTH * TB_SCREEN_HEIGHT];
-    uint8_t script[TB_MEM_SCRIPT_SIZE];
-    uint8_t lua_state[TB_MEM_LUA_STATE_SIZE];
-    uint8_t audio_data[TB_MEM_AUDIO_DATA_SIZE];
-    uint8_t pngle_data[TB_MEM_PNGLE_SIZE];
-    int16_t audio_buffer[TB_AUDIO_FRAME_SAMPLES];
-    uint8_t button_input[TB_MEM_BUTTON_INPUT_SIZE];
-    uint8_t user[TB_MEM_USER_SIZE];
+    uint8_t  script[TB_MEM_SCRIPT_SIZE];
+    uint8_t  lua_state[TB_MEM_LUA_STATE_SIZE];
+    uint8_t  audio_data[TB_MEM_AUDIO_DATA_SIZE];
+    uint8_t  pngle_data[TB_MEM_PNGLE_SIZE];
+    int16_t  audio_buffer[TB_AUDIO_FRAME_SAMPLES];
+    uint8_t  button_input[TB_MEM_BUTTON_INPUT_SIZE];
+    uint8_t  user[TB_MEM_USER_SIZE];
 };
 
 #define TB_MEM_SIZE (sizeof(struct TinyBitMemory))
