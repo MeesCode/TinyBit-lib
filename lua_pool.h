@@ -6,5 +6,6 @@
 
 lua_State* lua_pool_newstate(void);
 size_t lua_pool_get_used(void);
+void lua_pool_reset(void);
 
 #endif

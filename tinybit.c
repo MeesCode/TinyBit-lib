@@ -43,6 +43,7 @@ void tinybit_init(struct TinyBitMemory* memory) {
     // initialize memory
     srand(time(NULL));
     memory_init();
+    lua_pool_reset();
     tb_audio_init();
     cartridge_init();
 

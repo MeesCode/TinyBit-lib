@@ -122,3 +122,8 @@ lua_State* lua_pool_newstate(void) {
 size_t lua_pool_get_used(void) {
     return lua_heap_used;
 }
+
+void lua_pool_reset(void) {
+    lua_heap_initialized = false;
+    lua_heap_used = 0;
+}
