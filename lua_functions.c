@@ -84,8 +84,6 @@ void lua_setup(lua_State* L) {
     lua_setglobal(L, "rect");
     lua_pushcfunction(L, lua_oval);
     lua_setglobal(L, "oval");
-    lua_pushcfunction(L, lua_bpm);
-    lua_setglobal(L, "bpm");
     lua_pushcfunction(L, lua_btn);
     lua_setglobal(L, "btn");
     lua_pushcfunction(L, lua_btnp);
@@ -448,13 +446,6 @@ int lua_poly_clear(lua_State* L) {
 // Lua function to draw the current polygon
 int lua_poly(lua_State* L) {
     draw_polygon();
-    return 0;
-}
-
-// Lua function to set beats per minute for audio timing
-int lua_bpm(lua_State* L) {
-    int new_bpm = luaL_checkinteger(L, 1);
-    set_bpm(new_bpm);
     return 0;
 }
 

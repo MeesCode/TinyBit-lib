@@ -183,7 +183,8 @@ Button constants: `A`, `B`, `UP`, `DOWN`, `LEFT`, `RIGHT`, `START`, `SELECT`
 - `music(abc_string)` - Play looping music from ABC notation
 - `sfx(abc_string)` - Play one-shot sound effect from ABC notation
 - `sfx_active()` - Check if a sound effect is currently playing
-- `bpm(beats_per_minute)` - Set tempo
+
+Tempo is set per-score via the ABC `Q:` header (e.g. `Q:1/4=120`).
 
 Waveform constants: `SINE`, `SAW`, `SQUARE`, `NOISE`
 
