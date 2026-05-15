@@ -24,6 +24,13 @@ char characters[16 * 8] = {
 	' ', ' ', ' ', ' ',  ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ',  ' ', ' ', ' '
 };
 
+// Reset all font state to defaults (called from tinybit_init)
+void font_init() {
+	cursorX = 0;
+	cursorY = 0;
+	textColor = 0;
+}
+
 // Set the text color for font rendering
 void font_text_color(uint16_t color) {
 	textColor = color;

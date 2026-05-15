@@ -46,6 +46,13 @@ void tinybit_init(struct TinyBitMemory* memory) {
     lua_pool_reset();
     tb_audio_init();
     cartridge_init();
+    graphics_init();
+    font_init();
+
+    // reset frame loop state so a re-init mid-session starts from a clean slate
+    running = true;
+    sleep_ms = 0;
+    sleep_start_time = 0;
 
     // set up lua VM
     L = lua_pool_newstate();

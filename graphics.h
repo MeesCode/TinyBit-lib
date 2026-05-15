@@ -27,6 +27,7 @@ static inline uint16_t pack_color(int r, int g, int b, int a) {
 }
 
 // Graphics function declarations
+void graphics_init();
 int random_range(int, int);
 void draw_sprite(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, TARGET target);
 void draw_sprite_rotated(int sourceX, int sourceY, int sourceW, int sourceH, int targetX, int targetY, int targetW, int targetH, int angleDegrees, TARGET target);
