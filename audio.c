@@ -23,9 +23,6 @@
 // Bandpass filter Q factor (higher = narrower bandwidth, more tonal)
 #define NOISE_FILTER_Q 8.0f
 
-int channel = 0;
-int volume = 10;
-
 // Bandpass filter state for pitched noise
 struct bandpass_state {
     float low;   // Low-pass output

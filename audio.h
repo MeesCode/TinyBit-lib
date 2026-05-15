@@ -16,9 +16,6 @@ typedef enum {
 #define CHANNEL_SFX 1
 #define NUM_CHANNELS 2
 
-extern int channel;
-extern int volume;
-
 // Audio initialization and processing
 void tb_audio_init();
 void process_audio();
