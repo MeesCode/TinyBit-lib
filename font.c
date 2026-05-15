@@ -11,7 +11,7 @@ int cursorX = 0;
 int cursorY = 0;
 const int fontWidth = 4;
 const int fontHeight = 6;
-uint16_t textColor = 0;
+uint16_t textColor = 0xFFFF;
 
 char characters[16 * 8] = {
 	'?', '"', '%', '\'', '(', ')', '*', '+', ',', '-', '.', '/', '!',  ' ', ' ', ' ',
@@ -28,7 +28,7 @@ char characters[16 * 8] = {
 void font_init() {
 	cursorX = 0;
 	cursorY = 0;
-	textColor = 0;
+	textColor = 0xFFFF;
 }
 
 // Set the text color for font rendering
