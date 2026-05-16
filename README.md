@@ -151,7 +151,8 @@ Games access TinyBit features through Lua functions:
 
 ### Graphics
 - `cls()` - Clear the display
-- `sprite(sx, sy, sw, sh, dx, dy, dw, dh [, rotation])` - Draw sprite with optional rotation
+- `sprite(n, x, y)` - Draw the n-th 8x8 spritesheet cell at (x, y). The 128x128 spritesheet has 16 cells per row, so n is in [0, 255] (n = row * 16 + col).
+- `sprite(sx, sy, sw, sh, dx, dy, dw, dh [, rotation])` - Draw an arbitrary spritesheet region with optional rotation
 - `duplicate(sx, sy, sw, sh, dx, dy, dw, dh [, rotation])` - Copy display region
 - `rect(x, y, w, h)` - Draw rectangle
 - `oval(x, y, w, h)` - Draw oval

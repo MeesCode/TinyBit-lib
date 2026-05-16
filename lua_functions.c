@@ -231,8 +231,24 @@ int lua_sprite_copy(lua_State* L, TARGET target) {
     return 0;
 }
 
-// Lua function to draw a sprite (with optional rotation)
+// Lua function to draw a sprite (with optional rotation).
+// Two call forms:
+//   sprite(n, x, y)                                  - draw the n-th 8x8 cell at (x, y)
+//   sprite(sx, sy, sw, sh, tx, ty, tw, th[, rot])    - full source/target region copy
 int lua_sprite(lua_State* L) {
+    if (lua_gettop(L) == 3) {
+        int n = (int)luaL_checknumber(L, 1);
+        int targetX = (int)luaL_checknumber(L, 2);
+        int targetY = (int)luaL_checknumber(L, 3);
+
+        // Spritesheet is TB_SCREEN_WIDTH x TB_SCREEN_HEIGHT laid out as 8x8 cells.
+        int cells_per_row = TB_SCREEN_WIDTH / 8;
+        int sourceX = (n % cells_per_row) * 8;
+        int sourceY = (n / cells_per_row) * 8;
+
+        draw_sprite(sourceX, sourceY, 8, 8, targetX, targetY, 8, 8, TARGET_SPRITESHEET);
+        return 0;
+    }
     return lua_sprite_copy(L, TARGET_SPRITESHEET);
 }
 
