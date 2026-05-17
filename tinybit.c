@@ -100,6 +100,11 @@ void tinybit_sleep(int ms) {
     sleep_start_time = get_ticks_ms_func();
 }
 
+// Current Lua heap usage in bytes; capacity is TB_MEM_LUA_STATE_SIZE.
+size_t tinybit_lua_memory_used() {
+    return lua_pool_get_used();
+}
+
 // Feed cartridge PNG data to the TinyBit decoder
 bool tinybit_feed_cartridge(const uint8_t* buffer, size_t size){
     return cartridge_feed(buffer, size);

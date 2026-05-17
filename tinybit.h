@@ -83,6 +83,7 @@ bool tinybit_restart();
 void tinybit_loop();
 void tinybit_stop();
 void tinybit_sleep(int ms);
+size_t tinybit_lua_memory_used();
 
 // Callback function setters
 void tinybit_log_cb(void (*log_func_ptr)(const char*));
