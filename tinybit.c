@@ -102,11 +102,24 @@ bool tinybit_start(){
     const char* script = (const char*)tinybit_memory->script;
     size_t script_len = strlen(script);
 
-    if (luaL_loadbuffer(L, script, script_len, "=script") != LUA_OK
-        || lua_pcall(L, 0, 0, 0) != LUA_OK) {
+    if (luaL_loadbuffer(L, script, script_len, "=script") != LUA_OK) {
+        // Compile error — no Lua stack yet, so no traceback.
         emit_lua_error(L, /*with_trace=*/0);
         return false;
     }
+
+    // Load succeeded — install the message handler below the loaded chunk so
+    // a top-level runtime error in the script gets a traceback.
+    int msgh_idx = lua_gettop(L);     // index of the loaded chunk
+    lua_pushcfunction(L, err_msgh);   // [..., chunk, err_msgh]
+    lua_insert(L, msgh_idx);          // [..., err_msgh, chunk]
+
+    if (lua_pcall(L, 0, 0, msgh_idx) != LUA_OK) {
+        emit_lua_error(L, /*with_trace=*/1);
+        lua_remove(L, msgh_idx);
+        return false;
+    }
+    lua_remove(L, msgh_idx);
     return true;
 }
 
