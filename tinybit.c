@@ -102,7 +102,7 @@ bool tinybit_start(){
     const char* script = (const char*)tinybit_memory->script;
     size_t script_len = strlen(script);
 
-    if (luaL_loadbuffer(L, script, script_len, "script") != LUA_OK
+    if (luaL_loadbuffer(L, script, script_len, "=script") != LUA_OK
         || lua_pcall(L, 0, 0, 0) != LUA_OK) {
         emit_lua_error(L, /*with_trace=*/0);
         return false;
