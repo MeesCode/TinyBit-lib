@@ -92,5 +92,6 @@ void tinybit_poll_input_cb(void (*poll_input_func_ptr)());
 void tinybit_audio_queue_cb(void (*audio_queue_func_ptr)());
 void tinybit_gamecount_cb(int (*gamecount_func_ptr)());
 void tinybit_gameload_cb(void (*gameload_func_ptr)(int index));
+void tinybit_error_cb(void (*error_func_ptr)(const char* message, const char* traceback));
 
 #endif

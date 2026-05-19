@@ -26,11 +26,51 @@ static int sleep_start_time = 0;
 long max_memory_usage = 0;
 
 static lua_State* L;
+static void (*error_func)(const char* message, const char* traceback) = NULL;
 
 static void (*frame_func)();
 static void (*input_func)();
 static int (*get_ticks_ms_func)();
 static void (*audio_queue_func)();
+
+// Lua message handler used as the msgh arg of the runtime lua_pcall.
+// Receives the original error on the stack, returns a string that is
+// "<original>\nstack traceback:\n<frames…>".
+static int err_msgh(lua_State* l) {
+    const char* msg = lua_tostring(l, 1);
+    if (!msg) msg = "(non-string error)";
+    luaL_traceback(l, l, msg, 1);
+    return 1;
+}
+
+// Pops the error from the top of the Lua stack and, if error_func is set,
+// invokes it. For runtime errors (with_trace != 0), splits the combined
+// "msg\nstack traceback:\nframes" string from err_msgh into two parts.
+static void emit_lua_error(lua_State* l, int with_trace) {
+    const char* raw = lua_tostring(l, -1);
+    if (!raw) raw = "(non-string error)";
+
+    if (error_func) {
+        if (with_trace) {
+            const char* sep = strstr(raw, "\nstack traceback:");
+            if (sep) {
+                size_t msg_len = (size_t)(sep - raw);
+                static char msg_buf[4096];
+                if (msg_len >= sizeof(msg_buf)) msg_len = sizeof(msg_buf) - 1;
+                memcpy(msg_buf, raw, msg_len);
+                msg_buf[msg_len] = '\0';
+                const char* trace = sep + 1; // skip leading newline
+                error_func(msg_buf, trace);
+            } else {
+                error_func(raw, NULL);
+            }
+        } else {
+            error_func(raw, NULL);
+        }
+    }
+
+    lua_pop(l, 1);
+}
 
 // Initialize the TinyBit system with memory, input state, and audio buffer pointers
 void tinybit_init(struct TinyBitMemory* memory) {
@@ -59,15 +99,15 @@ void tinybit_init(struct TinyBitMemory* memory) {
 
 // Start executing the Lua script currently loaded in memory
 bool tinybit_start(){
-    // load lua file
-    if (luaL_dostring(L, (char*)tinybit_memory->script) == LUA_OK) {
-        lua_pop(L, lua_gettop(L));
-        return true; // success
+    const char* script = (const char*)tinybit_memory->script;
+    size_t script_len = strlen(script);
+
+    if (luaL_loadbuffer(L, script, script_len, "script") != LUA_OK
+        || lua_pcall(L, 0, 0, 0) != LUA_OK) {
+        emit_lua_error(L, /*with_trace=*/0);
+        return false;
     }
-    else {
-        lua_pop(L, lua_gettop(L)); // pop error message
-        return false; // runtime error in lua code
-    }
+    return true;
 }
 
 // Reset the Lua state and start a new game
@@ -118,13 +158,19 @@ void tinybit_loop() {
     // LOGIC
     if(sleep_ms == 0 || get_ticks_ms_func() - sleep_start_time >= sleep_ms) {
         sleep_ms = 0;
+        lua_pushcfunction(L, err_msgh);
+        int msgh_idx = lua_gettop(L);
         lua_getglobal(L, "_draw");
-        if (lua_pcall(L, 0, 1, 0) == LUA_OK) {
-            lua_pop(L, lua_gettop(L));
+        int status = lua_pcall(L, 0, 1, msgh_idx);
+        if (status == LUA_OK) {
+            lua_pop(L, 1);          // pop the (unused) result
+            lua_remove(L, msgh_idx); // pop the message handler
         } else {
-            lua_pop(L, lua_gettop(L)); // pop error message
-            printf("[TinyBit] Lua error");
+            emit_lua_error(L, /*with_trace=*/1); // pops the error (with traceback)
+            lua_remove(L, msgh_idx);             // pop the message handler
             audio_stop_all();
+            // error_screen is a hand-written clean script; tinybit_restart()
+            // will tinybit_start() it and the new path will not re-fire emit_lua_error.
             strcpy((char*)tinybit_memory->script, error_screen);
             tinybit_restart();
         }
@@ -188,6 +234,10 @@ void tinybit_log_cb(void (*log_func_ptr)(const char*)){
     }
 
     log_func = log_func_ptr;
+}
+
+void tinybit_error_cb(void (*error_func_ptr)(const char* message, const char* traceback)) {
+    error_func = error_func_ptr;
 }
 
 void tinybit_get_ticks_ms_cb(int (*get_ticks_ms_func_ptr)()) {
