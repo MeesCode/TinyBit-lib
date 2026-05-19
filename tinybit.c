@@ -86,6 +86,13 @@ void tinybit_init(struct TinyBitMemory* memory) {
     lua_pool_reset();
     tb_audio_init();
     cartridge_init();
+    graphics_init();
+    font_init();
+
+    // reset frame loop state so a re-init mid-session starts from a clean slate
+    running = true;
+    sleep_ms = 0;
+    sleep_start_time = 0;
 
     // set up lua VM
     L = lua_pool_newstate();
@@ -144,6 +151,11 @@ void tinybit_stop() {
 void tinybit_sleep(int ms) {
     sleep_ms = ms;
     sleep_start_time = get_ticks_ms_func();
+}
+
+// Current Lua heap usage in bytes; capacity is TB_MEM_LUA_STATE_SIZE.
+size_t tinybit_lua_memory_used() {
+    return lua_pool_get_used();
 }
 
 // Feed cartridge PNG data to the TinyBit decoder

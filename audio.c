@@ -23,10 +23,6 @@
 // Bandpass filter Q factor (higher = narrower bandwidth, more tonal)
 #define NOISE_FILTER_Q 8.0f
 
-int bpm = 150;
-int channel = 0;
-int volume = 10;
-
 // Bandpass filter state for pitched noise
 struct bandpass_state {
     float low;   // Low-pass output
@@ -261,13 +257,6 @@ void process_audio() {
                 channel->voices[v].sample_processed++;
             }
         }
-    }
-}
-
-// Set the beats per minute for timing calculations
-void set_bpm(int new_bpm) {
-    if (new_bpm > 0) {
-        bpm = new_bpm;
     }
 }
 

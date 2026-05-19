@@ -151,7 +151,8 @@ Games access TinyBit features through Lua functions:
 
 ### Graphics
 - `cls()` - Clear the display
-- `sprite(sx, sy, sw, sh, dx, dy, dw, dh [, rotation])` - Draw sprite with optional rotation
+- `sprite(n, x, y)` - Draw the n-th 8x8 spritesheet cell at (x, y). The 128x128 spritesheet has 16 cells per row, so n is in [0, 255] (n = row * 16 + col).
+- `sprite(sx, sy, sw, sh, dx, dy, dw, dh [, rotation])` - Draw an arbitrary spritesheet region with optional rotation
 - `duplicate(sx, sy, sw, sh, dx, dy, dw, dh [, rotation])` - Copy display region
 - `rect(x, y, w, h)` - Draw rectangle
 - `oval(x, y, w, h)` - Draw oval
@@ -183,7 +184,8 @@ Button constants: `A`, `B`, `UP`, `DOWN`, `LEFT`, `RIGHT`, `START`, `SELECT`
 - `music(abc_string)` - Play looping music from ABC notation
 - `sfx(abc_string)` - Play one-shot sound effect from ABC notation
 - `sfx_active()` - Check if a sound effect is currently playing
-- `bpm(beats_per_minute)` - Set tempo
+
+Tempo is set per-score via the ABC `Q:` header (e.g. `Q:1/4=120`).
 
 Waveform constants: `SINE`, `SAW`, `SQUARE`, `NOISE`
 

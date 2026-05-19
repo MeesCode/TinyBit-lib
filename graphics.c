@@ -33,6 +33,14 @@ static const int sin_table[] = {
     64729, 64898, 65047, 65176, 65286, 65376, 65446, 65496, 65526, 65536,
 };
 
+// Reset all graphics state to defaults (called from tinybit_init)
+void graphics_init() {
+    fillColor = 0;
+    strokeColor = 0;
+    strokeWidth = 0;
+    polygon_point_count = 0;
+}
+
 // Fast sine approximation using lookup table
 int fast_sin(int angle) {
     angle = angle % 360;
