@@ -19,7 +19,7 @@
 
 // define cover location
 #define TB_COVER_X 64
-#define TB_COVER_Y 60
+#define TB_COVER_Y 64
 
 // Cartridge header (on-disk layout, little-endian, 146 bytes)
 #define TB_HEADER_TITLE_SIZE    64
